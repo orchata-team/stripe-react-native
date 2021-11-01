@@ -20,6 +20,7 @@ export namespace CardFieldInput {
      * See the docs for details: https://stripe.com/docs/security/guide#validating-pci-compliance
      */
     number?: string;
+    cvc?: string;
   }
 
   export interface Styles {
