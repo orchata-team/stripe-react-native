@@ -1,7 +1,4 @@
-import {
-  PaymentIntents,
-  PaymentMethodCreateParams,
-} from '@stripe/stripe-react-native';
+import { PaymentIntent, BillingDetails } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, TextInput, View, Text, Switch } from 'react-native';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
@@ -25,7 +22,7 @@ export default function SepaPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'eur',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         payment_method_types: ['sepa_debit'],
       }),
     });
@@ -43,27 +40,29 @@ export default function SepaPaymentScreen() {
       return;
     }
 
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       name: 'John Doe',
       email: email,
     };
 
-    const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'SepaDebit',
-      billingDetails,
-      iban,
-      setupFutureUsage: saveIban ? 'OffSession' : undefined,
-    });
+    const { error, paymentIntent } = await confirmPayment(
+      clientSecret,
+      {
+        paymentMethodType: 'SepaDebit',
+        paymentMethodData: { billingDetails, iban },
+      },
+      { setupFutureUsage: saveIban ? 'OffSession' : undefined }
+    );
 
     if (error) {
       Alert.alert(`Error code: ${error.code}`, error.message);
     } else if (paymentIntent) {
-      if (paymentIntent.status === PaymentIntents.Status.Processing) {
+      if (paymentIntent.status === PaymentIntent.Status.Processing) {
         Alert.alert(
           'Processing',
           `The debit has been successfully submitted and is now processing.`
         );
-      } else if (paymentIntent.status === PaymentIntents.Status.Succeeded) {
+      } else if (paymentIntent.status === PaymentIntent.Status.Succeeded) {
         Alert.alert(
           'Success',
           `The payment was confirmed successfully! currency: ${paymentIntent.currency}`
@@ -93,6 +92,7 @@ export default function SepaPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
       <View style={styles.row}>

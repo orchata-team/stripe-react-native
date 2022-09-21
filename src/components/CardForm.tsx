@@ -33,17 +33,19 @@ export interface Props extends AccessibilityProps {
   autofocus?: boolean;
   testID?: string;
 
-  // props iOS only
+  /** All styles except backgroundColor, cursorColor, borderColor, and borderRadius are Android only */
   cardStyle?: CardFormView.Styles;
   // isUserInteractionEnabled?: boolean;
 
-  // TODO: will make it public when android-sdk allows for this
+  // TODO: will make it public when iOS SDK allows for this
   // postalCodeEnabled?: boolean;
 
-  // TODO: will make it public when ios-sdk allows for this
-  // placeholder: CardFormView.Placeholders;
+  /** Android only */
+  placeholders?: CardFormView.Placeholders;
+  /** Android only */
+  defaultValues?: CardFormView.DefaultValues;
   // onBlur?(): void;
-  // onFocus?(focusedField: Nullable<CardFormView.Names>): void;
+  // onFocus?(focusedField: CardFormView.FieldNames | null): void;
   onFormComplete?(card: CardFormView.Details): void;
   /**
    * WARNING: If set to `true` the full card number will be returned in the `onFormComplete` handler.
@@ -80,7 +82,8 @@ export const CardForm = forwardRef<CardFormView.Methods, Props>(
       // postalCodeEnabled = true,
       // onFocus,
       // onBlur,
-      // placeholder,
+      placeholders,
+      defaultValues,
       ...props
     },
     ref
@@ -101,8 +104,9 @@ export const CardForm = forwardRef<CardFormView.Methods, Props>(
           postalCode: card.postalCode,
         };
 
-        if (card.hasOwnProperty('number')) {
+        if (card.hasOwnProperty('number') || card.hasOwnProperty('cvc')) {
           data.number = card.number || '';
+          data.cvc = card.cvc || '';
           if (__DEV__ && onFormComplete && card.complete) {
             console.warn(
               `[stripe-react-native] ⚠️ WARNING: You've enabled \`dangerouslyGetFullCardDetails\`, meaning full card details are being returned. Only do this if you're certain that you fulfill the necessary PCI compliance requirements. Make sure that you're not mistakenly logging or storing full card details! See the docs for details: https://stripe.com/docs/security/guide#validating-pci-compliance`
@@ -165,16 +169,28 @@ export const CardForm = forwardRef<CardFormView.Methods, Props>(
         onFormComplete={onFormCompleteHandler}
         cardStyle={{
           backgroundColor: cardStyle?.backgroundColor,
+          borderColor: cardStyle?.borderColor,
+          borderWidth: cardStyle?.borderWidth,
+          borderRadius: cardStyle?.borderRadius,
+          cursorColor: cardStyle?.cursorColor,
+          fontSize: cardStyle?.fontSize,
+          placeholderColor: cardStyle?.placeholderColor,
+          textColor: cardStyle?.textColor,
+          textErrorColor: cardStyle?.textErrorColor,
+          fontFamily: cardStyle?.fontFamily,
           // disabledBackgroundColor: cardStyle?.disabledBackgroundColor,
           // type: cardStyle?.type,
         }}
         // isUserInteractionEnabledValue={isUserInteractionEnabled}
-        // placeholder={{
-        //   number: placeholder?.number,
-        //   expiration: placeholder?.expiration,
-        //   cvc: placeholder?.cvc,
-        //   postalCode: placeholder?.postalCode,
-        // }}
+        placeholders={{
+          number: placeholders?.number,
+          expiration: placeholders?.expiration,
+          cvc: placeholders?.cvc,
+          postalCode: placeholders?.postalCode,
+        }}
+        defaultValues={{
+          ...(defaultValues ?? {}),
+        }}
         onFocusChange={onFocusHandler}
         // postalCodeEnabled={postalCodeEnabled}
         {...props}

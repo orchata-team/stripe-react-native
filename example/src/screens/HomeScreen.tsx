@@ -1,14 +1,17 @@
 import React, { useCallback, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useStripe } from '@stripe/stripe-react-native';
-import { Linking, StyleSheet, View, ScrollView, Platform } from 'react-native';
+import {
+  Linking,
+  StyleSheet,
+  View,
+  ScrollView,
+  Platform,
+  Alert,
+} from 'react-native';
 import { colors } from '../colors';
 import Button from '../components/Button';
 import { Collapse } from '../components/Collapse';
-
-export type RootStackParamList = {
-  PaymentResultScreen: { url: string };
-};
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -16,9 +19,11 @@ export default function HomeScreen() {
 
   const handleDeepLink = useCallback(
     async (url: string | null) => {
-      if (url && url.includes('safepay')) {
-        await handleURLCallback(url);
-        navigation.navigate('PaymentResultScreen', { url });
+      if (url) {
+        const stripeHandled = await handleURLCallback(url);
+        if (stripeHandled) {
+          navigation.navigate('PaymentResultScreen', { url });
+        }
       }
     },
     [navigation, handleURLCallback]
@@ -30,15 +35,16 @@ export default function HomeScreen() {
       handleDeepLink(initialUrl);
     };
 
-    const urlCallback = (event: { url: string }) => {
-      handleDeepLink(event.url);
-    };
-
     getUrlAsync();
 
-    Linking.addEventListener('url', urlCallback);
+    const deepLinkListener = Linking.addEventListener(
+      'url',
+      (event: { url: string }) => {
+        handleDeepLink(event.url);
+      }
+    );
 
-    return () => Linking.removeEventListener('url', urlCallback);
+    return () => deepLinkListener.remove();
   }, [handleDeepLink]);
 
   return (
@@ -55,9 +61,17 @@ export default function HomeScreen() {
           </View>
           <View style={styles.buttonContainer}>
             <Button
+              title="Prebuilt UI for Subscription"
+              onPress={() => {
+                navigation.navigate('PaymentSheetWithSetupIntent');
+              }}
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
               title="Prebuilt UI (multi-step)"
               onPress={() => {
-                navigation.navigate('PaymentsUICustom');
+                navigation.navigate('PaymentsUICustomScreen');
               }}
             />
           </View>
@@ -65,7 +79,7 @@ export default function HomeScreen() {
             <Button
               title="Card element only"
               onPress={() => {
-                navigation.navigate('WebhookPayment');
+                navigation.navigate('WebhookPaymentScreen');
               }}
             />
           </View>
@@ -86,7 +100,7 @@ export default function HomeScreen() {
             <Button
               title="Set up future payments"
               onPress={() => {
-                navigation.navigate('SetupFuturePayment');
+                navigation.navigate('SetupFuturePaymentScreen');
               }}
             />
           </View>
@@ -94,7 +108,7 @@ export default function HomeScreen() {
             <Button
               title="Finalize payments on the server"
               onPress={() => {
-                navigation.navigate('NoWebhookPayment');
+                navigation.navigate('NoWebhookPaymentScreen');
               }}
             />
           </View>
@@ -103,6 +117,14 @@ export default function HomeScreen() {
               title="Recollect a CVC"
               onPress={() => {
                 navigation.navigate('CVCReCollectionScreen');
+              }}
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Create tokens"
+              onPress={() => {
+                navigation.navigate('CreateTokenScreen');
               }}
             />
           </View>
@@ -140,6 +162,22 @@ export default function HomeScreen() {
               title="BECS Direct Debit set up"
               onPress={() => {
                 navigation.navigate('AuBECSDebitSetupPaymentScreen');
+              }}
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="ACH payment"
+              onPress={() => {
+                navigation.navigate('ACHPaymentScreen');
+              }}
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="ACH setup"
+              onPress={() => {
+                navigation.navigate('ACHSetupScreen');
               }}
             />
           </View>
@@ -196,7 +234,7 @@ export default function HomeScreen() {
             <Button
               title="iDEAL payment"
               onPress={() => {
-                navigation.navigate('IdealPayment');
+                navigation.navigate('IdealPaymentScreen');
               }}
             />
           </View>
@@ -248,6 +286,22 @@ export default function HomeScreen() {
               }}
             />
           </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Klarna"
+              onPress={() => {
+                navigation.navigate('KlarnaPaymentScreen');
+              }}
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Affirm"
+              onPress={() => {
+                navigation.navigate('AffirmScreen');
+              }}
+            />
+          </View>
         </>
       </Collapse>
 
@@ -280,7 +334,7 @@ export default function HomeScreen() {
               <Button
                 title="Apple Pay"
                 onPress={() => {
-                  navigation.navigate('ApplePay');
+                  navigation.navigate('ApplePayScreen');
                 }}
               />
             </View>
@@ -307,9 +361,30 @@ export default function HomeScreen() {
           )}
           <View style={styles.buttonContainer}>
             <Button
+              title="PayPal"
+              onPress={() => {
+                navigation.navigate('PayPalScreen');
+              }}
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
               title="WeChat Pay"
               onPress={() => {
-                navigation.navigate('WeChatPaymentScreen');
+                // navigation.navigate('WeChatPaymentScreen');
+                Alert.alert('WeChat Pay is not yet supported.');
+              }}
+            />
+          </View>
+        </>
+      </Collapse>
+      <Collapse title="Financial Connections">
+        <>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Collect Bank Account"
+              onPress={() => {
+                navigation.navigate('CollectBankAccountScreen');
               }}
             />
           </View>

@@ -4,14 +4,11 @@ import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { API_URL } from '../Config';
 import Button from '../components/Button';
 import PaymentScreen from '../components/PaymentScreen';
-import {
-  PaymentMethodCreateParams,
-  PaymentIntents,
-} from '@stripe/stripe-react-native';
+import { BillingDetails, PaymentIntent } from '@stripe/stripe-react-native';
 
 export default function NoWebhookPaymentScreen() {
   const [loading, setLoading] = useState(false);
-  const { createPaymentMethod, handleCardAction } = useStripe();
+  const { createPaymentMethod, handleNextAction } = useStripe();
 
   const callNoWebhookPayEndpoint = async (
     data:
@@ -19,7 +16,7 @@ export default function NoWebhookPaymentScreen() {
           useStripeSdk: boolean;
           paymentMethodId: string;
           currency: string;
-          items: { id: string }[];
+          items: string[];
         }
       | { paymentIntentId: string }
   ) => {
@@ -51,20 +48,22 @@ export default function NoWebhookPaymentScreen() {
   const handlePayPress = async () => {
     setLoading(true);
     // 1. Gather customer billing information (ex. email)
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       email: 'email@stripe.com',
       phone: '+48888000888',
-      addressCity: 'Houston',
-      addressCountry: 'US',
-      addressLine1: '1459  Circle Drive',
-      addressLine2: 'Texas',
-      addressPostalCode: '77063',
+      address: {
+        city: 'Houston',
+        country: 'US',
+        line1: '1459  Circle Drive',
+        line2: 'Texas',
+        postalCode: '77063',
+      },
     }; // mocked data for tests
 
     // 2. Create payment method
     const { paymentMethod, error } = await createPaymentMethod({
-      type: 'Card',
-      billingDetails,
+      paymentMethodType: 'Card',
+      paymentMethodData: { billingDetails },
     });
 
     if (error) {
@@ -82,7 +81,7 @@ export default function NoWebhookPaymentScreen() {
       useStripeSdk: true,
       paymentMethodId: paymentMethod.id,
       currency: 'usd', // mocked data
-      items: [{ id: 'id' }],
+      items: ['id-1'],
     });
 
     const {
@@ -103,19 +102,20 @@ export default function NoWebhookPaymentScreen() {
     }
 
     if (clientSecret && requiresAction) {
-      // 4. if payment requires action calling handleCardAction
-      const { error: cardActionError, paymentIntent } = await handleCardAction(
-        clientSecret
+      // 4. if payment requires action calling handleNextAction
+      const { error: nextActionError, paymentIntent } = await handleNextAction(
+        clientSecret,
+        'stripe-example://stripe-redirect'
       );
 
-      if (cardActionError) {
+      if (nextActionError) {
         Alert.alert(
-          `Error code: ${cardActionError.code}`,
-          cardActionError.message
+          `Error code: ${nextActionError.code}`,
+          nextActionError.message
         );
       } else if (paymentIntent) {
         if (
-          paymentIntent.status === PaymentIntents.Status.RequiresConfirmation
+          paymentIntent.status === PaymentIntent.Status.RequiresConfirmation
         ) {
           // 5. Call API to confirm intent
           await confirmIntent(paymentIntent.id);
@@ -129,6 +129,16 @@ export default function NoWebhookPaymentScreen() {
     setLoading(false);
   };
 
+  const cardStyle = {
+    borderWidth: 4,
+    borderColor: '#A020F0',
+    borderRadius: 10,
+    textColor: '#0000ff',
+    placeholderColor: '#FFC0CB',
+    textErrorColor: 'red',
+    cursorColor: '#ffff00',
+  };
+
   return (
     <PaymentScreen>
       <CardField
@@ -140,12 +150,14 @@ export default function NoWebhookPaymentScreen() {
         }}
         style={styles.cardField}
         postalCodeEnabled={false}
+        cardStyle={cardStyle}
       />
 
       <Button
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
     </PaymentScreen>

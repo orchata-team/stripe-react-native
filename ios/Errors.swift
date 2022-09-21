@@ -1,35 +1,10 @@
 import Stripe
+@_spi(STP) import StripeCore
 
-enum ConfirmPaymentErrorType: String {
-    case Failed, Canceled, Unknown
-}
-
-enum ApplePayErrorType: String {
-    case Failed, Canceled, Unknown
-}
-
-enum NextPaymentActionErrorType: String {
-    case Failed, Canceled, Unknown
-}
-
-enum ConfirmSetupIntentErrorType: String {
-    case Failed, Canceled, Unknown
-}
-
-enum RetrievePaymentIntentErrorType: String {
-    case Unknown
-}
-
-enum RetrieveSetupIntentErrorType: String {
-    case Unknown
-}
-
-enum PaymentSheetErrorType: String {
-    case Failed, Canceled
-}
-
-enum CreateTokenErrorType: String {
-    case Failed
+enum ErrorType {
+    static let Failed = "Failed"
+    static let Canceled = "Canceled"
+    static let Unknown = "Unknown"
 }
 
 class Errors {
@@ -73,14 +48,17 @@ class Errors {
         
         return ["error": value]
     }
+    
     class func createError (_ code: String, _ error: NSError?) -> NSDictionary {
+        let rootError = getRootError(error)
+
         let value: NSDictionary = [
             "code": code,
-            "message": error?.userInfo["com.stripe.lib:ErrorMessageKey"] ?? error?.userInfo["NSLocalizedDescription"] ?? NSNull(),
-            "localizedMessage": error?.userInfo["NSLocalizedDescription"] ?? NSNull(),
-            "declineCode": error?.userInfo["com.stripe.lib:DeclineCodeKey"] ?? NSNull(),
-            "stripeErrorCode": error?.userInfo["com.stripe.lib:StripeErrorCodeKey"] ?? NSNull(),
-            "type": error?.userInfo["com.stripe.lib:StripeErrorTypeKey"] ?? NSNull(),
+            "message": rootError?.userInfo[STPError.errorMessageKey] ?? rootError?.localizedDescription ?? NSNull(),
+            "localizedMessage": rootError?.localizedDescription ?? NSNull(),
+            "declineCode": rootError?.userInfo[STPError.stripeDeclineCodeKey] ?? NSNull(),
+            "stripeErrorCode": rootError?.userInfo[STPError.stripeErrorCodeKey] ?? NSNull(),
+            "type": rootError?.userInfo[STPError.stripeErrorTypeKey] ?? NSNull(),
         ]
         
         return ["error": value]
@@ -110,5 +88,23 @@ class Errors {
         
         return ["error": value]
     }
+    
+    class func createError(_ code: String, _ error: Error) -> NSDictionary {
+        if let stripeError = error as? StripeError {
+            return createError(code, NSError.stp_error(from: stripeError))
+        }
+        
+        return createError(code, error as NSError?)
+    }
+    
+    class func getRootError(_ error: NSError?) -> NSError? {
+        // Dig and find the underlying error, otherwise we'll throw errors like "Try again"
+        if let underlyingError = error?.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return getRootError(underlyingError)
+        }
+        return error
+    }
+    
+    static let MISSING_INIT_ERROR = Errors.createError(ErrorType.Failed, "Stripe has not been initialized. Initialize Stripe in your app with the StripeProvider component or the initStripe method.")
 }
 

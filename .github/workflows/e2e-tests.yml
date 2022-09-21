@@ -9,7 +9,7 @@ on:
 jobs:
   test-android:
     name: e2e-android-test
-    runs-on: macOS-latest
+    runs-on: macos-latest
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -35,8 +35,13 @@ jobs:
         run: npm install react-native-cli
 
       - name: Install Dependencies
-        run: |
-          yarn bootstrap
+        run: yarn bootstrap-no-pods
+
+      - name: Setup Java environment
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
 
       - name: Gradle cache
         uses: actions/cache@v2
@@ -49,8 +54,9 @@ jobs:
       - name: Run Android Emulator and app
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 29
           arch: x86_64
+          profile: Galaxy Nexus
           target: google_apis
           force-avd-creation: false
           disable-animations: true
@@ -60,24 +66,26 @@ jobs:
             yarn run-example-android
             sleep 15
             adb shell 'echo "chrome --disable-fre --no-default-browser-check --no-first-run" > /data/local/tmp/chrome-command-line'
-            node ./run-appium-tests.js android
+            adb shell am set-debug-app --persistent com.android.chrome
+            yarn test:e2e:android
 
       - name: Upload Screenshoots
         uses: actions/upload-artifact@v1
         with:
-          name: e2e-results
+          name: e2e-results-android
           path: .tmp
         if: ${{ always() }}
 
       - uses: actions/download-artifact@v2
+        continue-on-error: true # https://github.com/actions/download-artifact/issues/42
         with:
-          name: e2e-results
+          name: e2e-results-android
           path: .tmp
         if: ${{ always() }}
 
   test-ios:
     name: e2e-ios-test
-    runs-on: macOS-latest
+    runs-on: macos-latest
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -107,34 +115,31 @@ jobs:
           node-version: 14.15.0
 
       - name: Install React Native CLI
-        run: |
-          npm install react-native-cli
+        run: npm install react-native-cli
 
       - name: Install Dependencies
-        run: |
-          yarn bootstrap
+        run: yarn bootstrap
 
       - name: Build iOS App
         run: |
           yarn run-example-ios
-          BUILT_APP=`find ~/Library/Developer/Xcode/DerivedData -name StripeSdkExample.app | grep Build/Products/Release-iphonesimulator/StripeSdkExample.app`
-          mkdir -p example/ios/DerivedData/StripeSdkExample/Build/Products/Release-iphonesimulator
-          cp -R $BUILT_APP example/ios/DerivedData/StripeSdkExample/Build/Products/Release-iphonesimulator
+          BUILT_APP=`find ~/Library/Developer/Xcode/DerivedData -name StripeSdkExample.app | grep Build/Products/Release-iphonesimulator/StripeSdkExample.app` && mkdir -p example/ios/DerivedData/StripeSdkExample/Build/Products/Release-iphonesimulator && cp -R $BUILT_APP example/ios/DerivedData/StripeSdkExample/Build/Products/Release-iphonesimulator
           sleep 30
 
       - name: Run Tests
         run: |
-          node ./run-appium-tests.js ios
+          yarn test:e2e:ios
 
       - name: Upload Screenshoots
         uses: actions/upload-artifact@v1
         with:
-          name: e2e-results
+          name: e2e-results-ios
           path: .tmp
         if: ${{ always() }}
 
       - uses: actions/download-artifact@v2
+        continue-on-error: true # https://github.com/actions/download-artifact/issues/42
         with:
-          name: e2e-results
+          name: e2e-results-ios
           path: .tmp
         if: ${{ always() }}

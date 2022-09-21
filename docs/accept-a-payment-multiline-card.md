@@ -85,7 +85,7 @@ function PaymentScreen() {
       },
       body: JSON.stringify({
         currency: 'usd',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
       }),
     });
     const { clientSecret } = await response.json();
@@ -147,8 +147,10 @@ function PaymentScreen() {
 
     // Confirm the payment with the card details
     const { paymentIntent, error } = await confirmPayment(clientSecret, {
-      type: 'Card',
-      billingDetails,
+      paymentMethodType: 'Card',
+      paymentMethodData: {
+        billingDetails,
+      },
     });
 
     if (error) {

@@ -1,4 +1,4 @@
-import type { PaymentMethodCreateParams } from '@stripe/stripe-react-native';
+import type { BillingDetails } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, TextInput } from 'react-native';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
@@ -20,7 +20,7 @@ export default function P24PaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'pln',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         payment_method_types: ['p24'],
       }),
     });
@@ -38,13 +38,13 @@ export default function P24PaymentScreen() {
       return;
     }
 
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       email,
     };
 
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'P24',
-      billingDetails,
+      paymentMethodType: 'P24',
+      paymentMethodData: { billingDetails },
     });
 
     if (error) {
@@ -72,6 +72,7 @@ export default function P24PaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
     </PaymentScreen>

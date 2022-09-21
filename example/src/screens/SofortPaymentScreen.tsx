@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Alert, StyleSheet, TextInput, View, Text, Switch } from 'react-native';
 import {
   useConfirmPayment,
-  PaymentIntents,
-  PaymentMethodCreateParams,
+  PaymentIntent,
+  BillingDetails,
 } from '@stripe/stripe-react-native';
 import Button from '../components/Button';
 import PaymentScreen from '../components/PaymentScreen';
@@ -24,7 +24,7 @@ export default function SofortPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'eur',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         payment_method_types: ['sofort'],
       }),
     });
@@ -42,23 +42,28 @@ export default function SofortPaymentScreen() {
       return;
     }
 
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       name: 'John Doe',
       email: 'john@example.com',
     };
 
-    const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Sofort',
-      billingDetails,
-      country: 'DE',
-      setupFutureUsage: saveIban ? 'OffSession' : undefined,
-    });
+    const { error, paymentIntent } = await confirmPayment(
+      clientSecret,
+      {
+        paymentMethodType: 'Sofort',
+        paymentMethodData: {
+          billingDetails,
+          country: 'DE',
+        },
+      },
+      { setupFutureUsage: saveIban ? 'OffSession' : undefined }
+    );
 
     if (error) {
       Alert.alert(`Error code: ${error.code}`, error.message);
       console.log('Payment confirmation error', error.message);
     } else if (paymentIntent) {
-      if (paymentIntent.status === PaymentIntents.Status.Processing) {
+      if (paymentIntent.status === PaymentIntent.Status.Processing) {
         Alert.alert('Processing', `The paymentIntent is processing`);
       } else {
         Alert.alert(
@@ -83,6 +88,7 @@ export default function SofortPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
       <View style={styles.row}>

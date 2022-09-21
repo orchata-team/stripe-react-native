@@ -3,6 +3,7 @@
 const SCREENS = <const>[
   'Accept a payment',
   'More payment scenarios',
+  'Create tokens',
   'Set up future payments',
   'inalize payments on the server',
   'Bank Debits',
@@ -21,6 +22,7 @@ const SCREENS = <const>[
   'Sofort SEPA Direct Debit set up',
   'Buy now pay later',
   'Afterpay and Clearpay',
+  'Klarna',
   'Vouchers',
   'Wallets',
   'Alipay',
@@ -33,6 +35,11 @@ const SCREENS = <const>[
   'BECS Direct Debit payment',
   'BECS Direct Debit set up',
   'WeChat Pay',
+  'ACH payment',
+  'ACH setup',
+  'Affirm',
+  'Collect Bank Account',
+  'Financial Connections',
 ];
 
 class HomeScreen {

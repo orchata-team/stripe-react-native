@@ -5,7 +5,7 @@ import {
   AuBECSDebitForm,
   useConfirmPayment,
   AuBECSDebitFormComponent,
-  PaymentIntents,
+  PaymentIntent,
 } from '@stripe/stripe-react-native';
 import Button from '../components/Button';
 import { API_URL } from '../Config';
@@ -24,7 +24,7 @@ export default function AuBECSDebitPaymentScreen() {
       body: JSON.stringify({
         email: formDetails?.email,
         currency: 'aud',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         payment_method_types: ['au_becs_debit'],
       }),
     });
@@ -40,20 +40,22 @@ export default function AuBECSDebitPaymentScreen() {
 
     const clientSecret = await fetchPaymentIntentClientSecret();
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'AuBecsDebit',
-      formDetails,
+      paymentMethodType: 'AuBecsDebit',
+      paymentMethodData: {
+        formDetails,
+      },
     });
 
     if (error) {
       Alert.alert(`Error code: ${error.code}`, error.message);
       console.log('Payment confirmation error', error.message);
     } else if (paymentIntent) {
-      if (paymentIntent.status === PaymentIntents.Status.Processing) {
+      if (paymentIntent.status === PaymentIntent.Status.Processing) {
         Alert.alert(
           'Processing',
           `The debit has been successfully submitted and is now processing.`
         );
-      } else if (paymentIntent.status === PaymentIntents.Status.Succeeded) {
+      } else if (paymentIntent.status === PaymentIntent.Status.Succeeded) {
         Alert.alert(
           'Success',
           `The payment was confirmed successfully! currency: ${paymentIntent.currency}`
@@ -78,6 +80,7 @@ export default function AuBECSDebitPaymentScreen() {
         <Button
           disabled={!formDetails}
           title="Pay"
+          accessibilityLabel="Pay"
           variant="primary"
           onPress={onPressPay}
           loading={loading}

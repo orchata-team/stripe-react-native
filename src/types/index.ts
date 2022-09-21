@@ -1,4 +1,3 @@
-import type { Card } from './Card';
 import type {
   ApplePayError,
   CardActionError,
@@ -11,26 +10,41 @@ import type {
   RetrievePaymentIntentError,
   RetrieveSetupIntentError,
   StripeError,
+  VerifyMicrodepositsError,
+  CollectBankAccountError,
 } from './Errors';
-import type { PaymentIntent } from './PaymentIntents';
-import type { PaymentMethod } from './PaymentMethods';
-import type { PaymentSheet } from './PaymentSheet';
-import type { SetupIntent } from './SetupIntent';
-import type { ThreeDSecureConfigurationParams } from './ThreeDSecure';
+import * as ApplePay from './ApplePay';
+import * as PaymentIntent from './PaymentIntent';
+import * as PaymentMethod from './PaymentMethod';
+import * as PaymentSheet from './PaymentSheet';
+import * as SetupIntent from './SetupIntent';
+import * as ThreeDSecure from './ThreeDSecure';
+import * as GooglePay from './GooglePay';
+import * as ApplePayButtonComponent from './components/ApplePayButtonComponent';
+import * as AuBECSDebitFormComponent from './components/AuBECSDebitFormComponent';
+import * as CardFieldInput from './components/CardFieldInput';
+import * as CardFormView from './components/CardFormView';
+import * as Token from './Token';
+import * as FinancialConnections from './FinancialConnections';
 
-export * from './ApplePay';
-export * from './PaymentIntents';
-export * from './PaymentMethods';
-export * from './SetupIntent';
-export * from './GooglePay';
-export * from './ThreeDSecure';
-export * from './components/ApplePayButtonComponent';
-export * from './components/AuBECSDebitForm';
-export * from './components/CardFieldInput';
-export * from './components/CardFormView';
-export * from './Card';
+export {
+  ApplePay,
+  PaymentIntent,
+  PaymentMethod,
+  PaymentSheet,
+  SetupIntent,
+  ThreeDSecure,
+  GooglePay,
+  ApplePayButtonComponent,
+  AuBECSDebitFormComponent,
+  CardFieldInput,
+  CardFormView,
+  Token,
+  FinancialConnections,
+};
+
 export * from './Errors';
-export * from './PaymentSheet';
+export { Address, BillingDetails } from './Common';
 
 /**
  * @ignore
@@ -38,11 +52,6 @@ export * from './PaymentSheet';
 export type Dictionary<T> = {
   [key: string]: T;
 };
-
-/**
- * @ignore
- */
-export type Nullable<T> = T | null;
 
 export interface AppInfo {
   name?: string;
@@ -53,7 +62,7 @@ export interface AppInfo {
 
 export type CreatePaymentMethodResult =
   | {
-      paymentMethod: PaymentMethod;
+      paymentMethod: PaymentMethod.Result;
       error?: undefined;
     }
   | {
@@ -63,7 +72,7 @@ export type CreatePaymentMethodResult =
 
 export type RetrievePaymentIntentResult =
   | {
-      paymentIntent: PaymentIntent;
+      paymentIntent: PaymentIntent.Result;
       error?: undefined;
     }
   | {
@@ -73,7 +82,7 @@ export type RetrievePaymentIntentResult =
 
 export type RetrieveSetupIntentResult =
   | {
-      setupIntent: SetupIntent;
+      setupIntent: SetupIntent.Result;
       error?: undefined;
     }
   | {
@@ -83,7 +92,7 @@ export type RetrieveSetupIntentResult =
 
 export type ConfirmPaymentResult =
   | {
-      paymentIntent: PaymentIntent;
+      paymentIntent: PaymentIntent.Result;
       error?: undefined;
     }
   | {
@@ -91,9 +100,9 @@ export type ConfirmPaymentResult =
       error: StripeError<ConfirmPaymentError>;
     };
 
-export type HandleCardActionResult =
+export type HandleNextActionResult =
   | {
-      paymentIntent: PaymentIntent;
+      paymentIntent: PaymentIntent.Result;
       error?: undefined;
     }
   | {
@@ -103,7 +112,7 @@ export type HandleCardActionResult =
 
 export type ConfirmSetupIntentResult =
   | {
-      setupIntent: SetupIntent;
+      setupIntent: SetupIntent.Result;
       error?: undefined;
     }
   | {
@@ -133,11 +142,7 @@ export type InitPaymentSheetResult =
 
 export type PresentPaymentSheetResult =
   | {
-      paymentOption?: undefined;
-      error?: undefined;
-    }
-  | {
-      paymentOption?: PaymentSheet.PaymentOption;
+      paymentOption: PaymentSheet.PaymentOption;
       error?: undefined;
     }
   | {
@@ -147,7 +152,7 @@ export type PresentPaymentSheetResult =
 
 export type CreateTokenResult =
   | {
-      token: Card.Token;
+      token: Token.Result;
       error?: undefined;
     }
   | {
@@ -161,7 +166,7 @@ export type ConfirmPaymentSheetPaymentResult = {
 
 export type ApplePayResult =
   | {
-      paymentMethod: PaymentMethod;
+      paymentMethod: PaymentMethod.Result;
       error?: undefined;
     }
   | {
@@ -172,10 +177,10 @@ export type ApplePayResult =
 export interface InitStripeParams {
   publishableKey: string;
   stripeAccountId?: string;
-  threeDSecureParams?: ThreeDSecureConfigurationParams;
+  threeDSecureParams?: ThreeDSecure.ConfigurationParams;
   merchantIdentifier?: string;
   urlScheme?: string;
-  setUrlSchemeOnAndroid?: boolean;
+  setReturnUrlSchemeOnAndroid?: boolean;
 }
 
 export interface InitialiseParams extends InitStripeParams {
@@ -200,7 +205,7 @@ export type PayWithGooglePayResult =
 
 export type CreateGooglePayPaymentMethodResult =
   | {
-      paymentMethod: PaymentMethod;
+      paymentMethod: PaymentMethod.Result;
       error?: undefined;
     }
   | {
@@ -214,4 +219,108 @@ export type OpenApplePaySetupResult =
     }
   | {
       error: StripeError<ApplePayError>;
+    };
+
+export type VerifyMicrodepositsParams =
+  | {
+      amounts: number[];
+      descriptorCode?: undefined;
+    }
+  | {
+      amounts?: undefined;
+      descriptorCode: string;
+    };
+
+export type VerifyMicrodepositsForPaymentResult =
+  | {
+      paymentIntent: PaymentIntent.Result;
+      error?: undefined;
+    }
+  | {
+      paymentIntent?: undefined;
+      error: StripeError<VerifyMicrodepositsError>;
+    };
+
+export type VerifyMicrodepositsForSetupResult =
+  | {
+      setupIntent: SetupIntent.Result;
+      error?: undefined;
+    }
+  | {
+      setupIntent?: undefined;
+      error: StripeError<VerifyMicrodepositsError>;
+    };
+
+export type CollectBankAccountForPaymentResult =
+  | {
+      paymentIntent: PaymentIntent.Result;
+      error?: undefined;
+    }
+  | {
+      paymentIntent?: undefined;
+      error: StripeError<CollectBankAccountError>;
+    };
+
+export type CollectBankAccountForSetupResult =
+  | {
+      setupIntent: SetupIntent.Result;
+      error?: undefined;
+    }
+  | {
+      setupIntent?: undefined;
+      error: StripeError<CollectBankAccountError>;
+    };
+
+export type GooglePayCardToken = {
+  id: string;
+  cardLastFour: string;
+  network: number;
+  serviceProvider: number;
+  issuer: string;
+  status:
+    | 'TOKEN_STATE_NEEDS_IDENTITY_VERIFICATION'
+    | 'TOKEN_STATE_PENDING'
+    | 'TOKEN_STATE_SUSPENDED'
+    | 'TOKEN_STATE_ACTIVE'
+    | 'TOKEN_STATE_FELICA_PENDING_PROVISIONING'
+    | 'TOKEN_STATE_UNTOKENIZED';
+};
+
+export type IsCardInWalletResult =
+  | {
+      isInWallet: boolean;
+      token?: GooglePayCardToken;
+      error?: undefined;
+    }
+  | {
+      isInWallet?: undefined;
+      token?: undefined;
+      error: StripeError<GooglePayError>;
+    };
+
+export type CanAddCardToWalletParams = {
+  /** The `primary_account_identifier` value from the issued card. Can be an empty string. */
+  primaryAccountIdentifier: string | null;
+  /** Last 4 digits of the card number. */
+  cardLastFour: string;
+  /** iOS only. Set this to `true` until shipping through TestFlight || App Store. If true, you must be using live cards, and have the proper iOS entitlement set up. See https://stripe.com/docs/issuing/cards/digital-wallets?platform=react-native#requesting-access-for-ios */
+  testEnv?: boolean;
+};
+
+export type CanAddCardToWalletResult =
+  | {
+      canAddCard: boolean;
+      details?: {
+        token?: GooglePayCardToken;
+        status?:
+          | 'MISSING_CONFIGURATION'
+          | 'UNSUPPORTED_DEVICE'
+          | 'CARD_ALREADY_EXISTS';
+      };
+      error?: undefined;
+    }
+  | {
+      canAddCard?: undefined;
+      details?: undefined;
+      error: StripeError<GooglePayError>;
     };

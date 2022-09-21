@@ -5,13 +5,15 @@ import {
   useConfirmPayment,
   useConfirmSetupIntent,
   useStripe,
+  createToken,
+  createPaymentMethod,
 } from '@stripe/stripe-react-native';
 import { API_URL } from '../Config';
 import Button from '../components/Button';
 import { colors } from '../colors';
 import PaymentScreen from '../components/PaymentScreen';
 import type {
-  PaymentMethodCreateParams,
+  BillingDetails,
   PaymentIntent,
   SetupIntent,
 } from '@stripe/stripe-react-native';
@@ -21,8 +23,10 @@ export default function SetupFuturePaymentScreen() {
   const [paymentError, setPaymentError] = useState<string | null>();
   const [offSessionLoading, setOffSessionLoading] = useState(false);
   const [retrievedPaymentIntent, setRetrievedPaymentIntent] =
-    useState<PaymentIntent | null>(null);
-  const [setupIntent, setSetupIntent] = useState<SetupIntent | null>(null);
+    useState<PaymentIntent.Result | null>(null);
+  const [setupIntent, setSetupIntent] = useState<SetupIntent.Result | null>(
+    null
+  );
 
   // It is also possible to use `useStripe` and then `stripe.confirmSetupIntent`
   // The only difference is that this approach will not have `loading` status support
@@ -59,28 +63,106 @@ export default function SetupFuturePaymentScreen() {
     return { clientSecret, error };
   };
 
-  const handlePayPress = async () => {
-    console.log('email', email);
+  const handlePayPressUsingForm = async () => {
     // 1. Create setup intent on backend
     const clientSecret = await createSetupIntentOnBackend(email);
 
     // 2. Gather customer billing information (ex. email)
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       email: email,
       phone: '+48888000888',
-      addressCity: 'Houston',
-      addressCountry: 'US',
-      addressLine1: '1459  Circle Drive',
-      addressLine2: 'Texas',
-      addressPostalCode: '77063',
+      address: {
+        city: 'Houston',
+        country: 'US',
+        line1: '1459  Circle Drive',
+        line2: 'Texas',
+        postalCode: '77063',
+      },
     }; // mocked data for tests
 
     // 3. Confirm setup intent
     const { error, setupIntent: setupIntentResult } = await confirmSetupIntent(
       clientSecret,
       {
-        type: 'Card',
-        billingDetails,
+        paymentMethodType: 'Card',
+        paymentMethodData: { billingDetails },
+      }
+    );
+
+    if (error) {
+      Alert.alert(`Error code: ${error.code}`, error.message);
+      console.log('Setup intent confirmation error', error.message);
+    } else if (setupIntentResult) {
+      Alert.alert(
+        'Success',
+        `Setup intent created. Intent status: ${setupIntentResult.status}`
+      );
+
+      setSetupIntent(setupIntentResult);
+    }
+  };
+
+  const handlePayPressUsingToken = async () => {
+    const clientSecret = await createSetupIntentOnBackend(email);
+
+    const { error: tokenError, token } = await createToken({
+      type: 'Card',
+      name: 'David Wallace',
+      currency: 'usd',
+    });
+
+    if (tokenError) {
+      Alert.alert(`Error code: ${tokenError.code}`, tokenError.message);
+      console.log('Setup intent confirmation error', tokenError.message);
+      return;
+    }
+
+    const { error, setupIntent: setupIntentResult } = await confirmSetupIntent(
+      clientSecret,
+      {
+        paymentMethodType: 'Card',
+        paymentMethodData: {
+          token: token?.id,
+        },
+      }
+    );
+
+    if (error) {
+      Alert.alert(`Error code: ${error.code}`, error.message);
+      console.log('Setup intent confirmation error', error.message);
+    } else if (setupIntentResult) {
+      Alert.alert(
+        'Success',
+        `Setup intent created. Intent status: ${setupIntentResult.status}`
+      );
+
+      setSetupIntent(setupIntentResult);
+    }
+  };
+
+  const handlePayPressUsingID = async () => {
+    const clientSecret = await createSetupIntentOnBackend(email);
+
+    const { error: e, paymentMethod } = await createPaymentMethod({
+      paymentMethodType: 'Card',
+    });
+
+    if (e) {
+      Alert.alert(`Error code: ${e.code}`, e.message);
+      console.log('Setup intent confirmation error', e.message);
+      return;
+    } else if (!paymentMethod) {
+      Alert.alert(`Something went wrong creating the payment method.`);
+      return;
+    }
+
+    const { error, setupIntent: setupIntentResult } = await confirmSetupIntent(
+      clientSecret,
+      {
+        paymentMethodType: 'Card',
+        paymentMethodData: {
+          paymentMethodId: paymentMethod.id,
+        },
       }
     );
 
@@ -149,24 +231,28 @@ export default function SetupFuturePaymentScreen() {
   // If the payment failed because it requires authentication, try again with the existing PaymentMethod instead of creating a new one.
   // Otherwise collect new details and create new PaymentMethod.
   const handleRecoveryFlow = async () => {
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       email: email,
       phone: '+48888000888',
-      addressCity: 'Houston',
-      addressCountry: 'US',
-      addressLine1: '1459  Circle Drive',
-      addressLine2: 'Texas',
-      addressPostalCode: '77063',
+      address: {
+        city: 'Houston',
+        country: 'US',
+        line1: '1459  Circle Drive',
+        line2: 'Texas',
+        postalCode: '77063',
+      },
     }; // mocked data for tests
 
     if (retrievedPaymentIntent?.lastPaymentError?.paymentMethod.id) {
       const { error } = await confirmPayment(
         retrievedPaymentIntent.clientSecret,
         {
-          type: 'Card',
-          billingDetails,
-          paymentMethodId:
-            retrievedPaymentIntent?.lastPaymentError?.paymentMethod.id,
+          paymentMethodType: 'Card',
+          paymentMethodData: {
+            billingDetails,
+            paymentMethodId:
+              retrievedPaymentIntent?.lastPaymentError?.paymentMethod.id,
+          },
         }
       );
       if (error) {
@@ -196,8 +282,20 @@ export default function SetupFuturePaymentScreen() {
       <View style={styles.buttonContainer}>
         <Button
           variant="primary"
-          onPress={handlePayPress}
-          title="Save"
+          onPress={handlePayPressUsingForm}
+          title="Save via card input form"
+          loading={loading}
+        />
+        <Button
+          variant="primary"
+          onPress={handlePayPressUsingToken}
+          title="Save via token"
+          loading={loading}
+        />
+        <Button
+          variant="primary"
+          onPress={handlePayPressUsingID}
+          title="Save via payment method ID"
           loading={loading}
         />
       </View>

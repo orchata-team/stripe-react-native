@@ -1,83 +1,56 @@
-import type { Nullable, StripeError } from '.';
-import type { AuBECSDebitFormComponent } from './components/AuBECSDebitForm';
-import type { PaymentMethod, PaymentMethods } from './PaymentMethods';
-
-export interface SetupIntent {
+import type { Type } from './PaymentMethod';
+import type { LastPaymentError } from './PaymentIntent';
+import type { NextAction } from './NextAction';
+import type * as PaymentMethod from './PaymentMethod';
+export interface Result {
   id: string;
   clientSecret: string;
-  lastSetupError: Nullable<ConfirmSetupIntent.LastPaymentError>;
-  created: Nullable<string>;
+  lastSetupError: LastPaymentError | null;
+  /** The UNIX timestamp (in milliseconds) of the date this Setup Intent was created. */
+  created: string | null;
   livemode: boolean;
-  paymentMethodId: Nullable<string>;
-  status: SetupIntents.Status;
-  paymentMethodTypes: PaymentMethods.Types[];
-  usage: SetupIntents.FutureUsage;
-  description: Nullable<string>;
+  paymentMethodId: string | null;
+  status: Status;
+  paymentMethodTypes: Type[];
+  usage: FutureUsage;
+  description: string | null;
+  nextAction: NextAction | null;
 }
 
-export namespace ConfirmSetupIntent {
-  export type LastPaymentError = StripeError<string> & {
-    paymentMethod: PaymentMethod;
-  };
+export type ConfirmParams =
+  | PaymentMethod.CardParams
+  | PaymentMethod.IdealParams
+  | PaymentMethod.OxxoParams
+  | PaymentMethod.P24Params
+  | PaymentMethod.AlipayParams
+  | PaymentMethod.GiropayParams
+  | PaymentMethod.SepaParams
+  | PaymentMethod.EpsParams
+  | PaymentMethod.AuBecsDebitParams
+  | PaymentMethod.SofortParams
+  | PaymentMethod.GrabPayParams
+  | PaymentMethod.FPXParams
+  | PaymentMethod.AfterpayClearpayParams
+  | PaymentMethod.KlarnaParams
+  | PaymentMethod.BancontactParams
+  | PaymentMethod.USBankAccountParams;
+// TODO: Change the above back to PaymentMethod.CreateParams when PayPal is supported through SetupIntents
 
-  export type Params =
-    | CardParams
-    | IdealParams
-    | BancontactParams
-    | SofortParams
-    | AuBecsDebitParams
-    | SepaParams;
+export type ConfirmOptions = {};
 
-  export interface Options {}
+export type FutureUsage =
+  | 'Unknown'
+  | 'None'
+  | 'OnSession'
+  | 'OffSession'
+  | 'OneTime';
 
-  export interface BaseParams {
-    billingDetails?: PaymentMethods.BillingDetails;
-  }
-
-  export interface CardParams extends BaseParams {
-    type: 'Card';
-  }
-
-  export interface IdealParams extends BaseParams {
-    type: 'Ideal';
-    bankName?: string;
-  }
-
-  export interface SofortParams extends BaseParams {
-    type: 'Sofort';
-    country: string;
-  }
-  export interface BancontactParams extends Required<BaseParams> {
-    type: 'Bancontact';
-  }
-
-  export interface SepaParams extends Required<BaseParams> {
-    type: 'SepaDebit';
-    iban: string;
-  }
-
-  export interface AuBecsDebitParams {
-    type: 'AuBecsDebit';
-    formDetails: AuBECSDebitFormComponent.FormDetails;
-  }
-}
-
-export namespace SetupIntents {
-  export type FutureUsage =
-    | 'Unknown'
-    | 'None'
-    | 'OnSession'
-    | 'OffSession'
-    | 'OneTime';
-
-  export enum Status {
-    Succeeded = 'Succeeded',
-    RequiresPaymentMethod = 'RequiresPaymentMethod',
-    RequiresConfirmation = 'RequiresConfirmation',
-    Canceled = 'Canceled',
-    Processing = 'Processing',
-    RequiresAction = 'RequiresAction',
-    RequiresCapture = 'RequiresCapture',
-    Unknown = 'Unknown',
-  }
+export enum Status {
+  Succeeded = 'Succeeded',
+  RequiresPaymentMethod = 'RequiresPaymentMethod',
+  RequiresConfirmation = 'RequiresConfirmation',
+  Canceled = 'Canceled',
+  Processing = 'Processing',
+  RequiresAction = 'RequiresAction',
+  Unknown = 'Unknown',
 }

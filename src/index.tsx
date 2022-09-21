@@ -5,6 +5,7 @@ export { useStripe } from './hooks/useStripe';
 export { useApplePay, Props as UseApplePayProps } from './hooks/useApplePay';
 export { usePaymentSheet } from './hooks/usePaymentSheet';
 export { useGooglePay } from './hooks/useGooglePay';
+export { useFinancialConnectionsSheet } from './hooks/useFinancialConnectionsSheet';
 
 //components
 export {
@@ -30,6 +31,10 @@ export {
   GooglePayButton,
   Props as GooglePayButtonProps,
 } from './components/GooglePayButton';
+export {
+  AddToWalletButton,
+  Props as AddToWalletButtonProps,
+} from './components/AddToWalletButton';
 
 export * from './functions';
 
