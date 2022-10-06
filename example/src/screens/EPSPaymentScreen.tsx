@@ -1,4 +1,4 @@
-import type { PaymentMethodCreateParams } from '@stripe/stripe-react-native';
+import type { BillingDetails } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, TextInput } from 'react-native';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
@@ -20,7 +20,7 @@ export default function EPSPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'eur',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         payment_method_types: ['eps'],
       }),
     });
@@ -38,13 +38,15 @@ export default function EPSPaymentScreen() {
       return;
     }
 
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       name: 'John Doe',
     };
 
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Eps',
-      billingDetails,
+      paymentMethodType: 'Eps',
+      paymentMethodData: {
+        billingDetails,
+      },
     });
 
     if (error) {
@@ -72,6 +74,7 @@ export default function EPSPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
     </PaymentScreen>

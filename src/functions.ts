@@ -1,4 +1,5 @@
-import { createError, isiOS } from './helpers';
+import { isAndroid, isiOS, createError } from './helpers';
+import { MissingRoutingNumber } from './types/Errors';
 import NativeStripeSdk from './NativeStripeSdk';
 import {
   ApplePay,
@@ -6,15 +7,16 @@ import {
   ApplePayResult,
   ConfirmPaymentResult,
   ConfirmPaymentSheetPaymentResult,
-  ConfirmSetupIntent,
+  SetupIntent,
+  PaymentIntent,
   ConfirmSetupIntentResult,
   CreatePaymentMethodResult,
   CreateTokenForCVCUpdateResult,
   CreateTokenResult,
   GooglePayInitResult,
-  HandleCardActionResult,
+  HandleNextActionResult,
   InitPaymentSheetResult,
-  PaymentMethodCreateParams,
+  PaymentMethod,
   PaymentSheet,
   PayWithGooglePayResult,
   PresentPaymentSheetResult,
@@ -24,19 +26,29 @@ import {
   GooglePay,
   CreateGooglePayPaymentMethodResult,
   OpenApplePaySetupResult,
+  Token,
+  VerifyMicrodepositsParams,
+  VerifyMicrodepositsForPaymentResult,
+  VerifyMicrodepositsForSetupResult,
+  CollectBankAccountForPaymentResult,
+  CollectBankAccountForSetupResult,
+  IsCardInWalletResult,
+  CanAddCardToWalletParams,
+  CanAddCardToWalletResult,
+  FinancialConnections,
 } from './types';
-import type { Card } from './types/Card';
+import { Platform } from 'react-native';
 
 const APPLE_PAY_NOT_SUPPORTED_MESSAGE =
   'Apple pay is not supported on this device';
 
 export const createPaymentMethod = async (
-  data: PaymentMethodCreateParams.Params,
-  options: PaymentMethodCreateParams.Options = {}
+  params: PaymentMethod.CreateParams,
+  options: PaymentMethod.CreateOptions = {}
 ): Promise<CreatePaymentMethodResult> => {
   try {
     const { paymentMethod, error } = await NativeStripeSdk.createPaymentMethod(
-      data,
+      params,
       options
     );
     if (error) {
@@ -47,7 +59,7 @@ export const createPaymentMethod = async (
     return {
       paymentMethod: paymentMethod!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       error,
     };
@@ -55,8 +67,18 @@ export const createPaymentMethod = async (
 };
 
 export const createToken = async (
-  params: Card.CreateTokenParams
+  params: Token.CreateParams
 ): Promise<CreateTokenResult> => {
+  if (
+    params.type === 'BankAccount' &&
+    params.country?.toLowerCase() === 'us' &&
+    !params.routingNumber
+  ) {
+    return {
+      error: MissingRoutingNumber,
+    };
+  }
+
   try {
     const { token, error } = await NativeStripeSdk.createToken(params);
 
@@ -68,9 +90,9 @@ export const createToken = async (
     return {
       token: token!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
@@ -89,7 +111,7 @@ export const retrievePaymentIntent = async (
     return {
       paymentIntent: paymentIntent!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       error,
     };
@@ -111,22 +133,30 @@ export const retrieveSetupIntent = async (
     return {
       setupIntent: setupIntent!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       error,
     };
   }
 };
 
+/**
+ * Confirm and, if necessary, authenticate a PaymentIntent.
+ *
+ * @param {string} paymentIntentClientSecret The client_secret of the associated [PaymentIntent](https://stripe.com/docs/api/payment_intents).
+ * @param {object=} params An optional object that contains data related to the payment method used to confirm this payment. If no object is provided (undefined), then it is assumed that the payment method has already been [attached  to the Payment Intent](https://stripe.com/docs/api/payment_intents/create#create_payment_intent-payment_method).
+ * @param {object=} options An optional object that contains options for this payment method.
+ * @returns A promise that resolves to an object containing either a `paymentIntent` field, or an `error` field.
+ */
 export const confirmPayment = async (
   paymentIntentClientSecret: string,
-  data: PaymentMethodCreateParams.Params,
-  options: PaymentMethodCreateParams.Options = {}
+  params?: PaymentIntent.ConfirmParams,
+  options: PaymentIntent.ConfirmOptions = {}
 ): Promise<ConfirmPaymentResult> => {
   try {
     const { paymentIntent, error } = await NativeStripeSdk.confirmPayment(
       paymentIntentClientSecret,
-      data,
+      params,
       options
     );
     if (error) {
@@ -137,7 +167,7 @@ export const confirmPayment = async (
     return {
       paymentIntent: paymentIntent!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       error,
     };
@@ -153,10 +183,10 @@ export const presentApplePay = async (
 ): Promise<ApplePayResult> => {
   if (!(await NativeStripeSdk.isApplePaySupported())) {
     return {
-      error: createError({
+      error: {
         code: ApplePayError.Canceled,
         message: APPLE_PAY_NOT_SUPPORTED_MESSAGE,
-      }),
+      },
     };
   }
 
@@ -170,7 +200,7 @@ export const presentApplePay = async (
       };
     }
     return { paymentMethod: paymentMethod! };
-  } catch (error) {
+  } catch (error: any) {
     return {
       error,
     };
@@ -186,10 +216,10 @@ export const updateApplePaySummaryItems = async (
 ): Promise<{ error?: StripeError<ApplePayError> }> => {
   if (!(await NativeStripeSdk.isApplePaySupported())) {
     return {
-      error: createError({
+      error: {
         code: ApplePayError.Canceled,
         message: APPLE_PAY_NOT_SUPPORTED_MESSAGE,
-      }),
+      },
     };
   }
 
@@ -200,9 +230,9 @@ export const updateApplePaySummaryItems = async (
     );
 
     return {};
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
@@ -212,29 +242,40 @@ export const confirmApplePayPayment = async (
 ): Promise<{ error?: StripeError<ApplePayError> }> => {
   if (!(await NativeStripeSdk.isApplePaySupported())) {
     return {
-      error: createError({
+      error: {
         code: ApplePayError.Canceled,
         message: APPLE_PAY_NOT_SUPPORTED_MESSAGE,
-      }),
+      },
     };
   }
   try {
     await NativeStripeSdk.confirmApplePayPayment(clientSecret);
     return {};
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
 
-export const handleCardAction = async (
-  paymentIntentClientSecret: string
-): Promise<HandleCardActionResult> => {
+/** Handles any nextAction required to authenticate the PaymentIntent.
+ * Call this method if you are using manual confirmation. See https://stripe.com/docs/payments/accept-a-payment?platform=react-native&ui=custom
+ *
+ * @param {string} paymentIntentClientSecret The client secret associated with the PaymentIntent.
+ * @param {string=} returnURL An optional return URL so the Stripe SDK can redirect back to your app after authentication. This should match the `return_url` you specified during PaymentIntent confirmation.
+ * */
+export const handleNextAction = async (
+  paymentIntentClientSecret: string,
+  returnURL?: string
+): Promise<HandleNextActionResult> => {
   try {
-    const { paymentIntent, error } = await NativeStripeSdk.handleCardAction(
-      paymentIntentClientSecret
-    );
+    const { paymentIntent, error } =
+      Platform.OS === 'ios'
+        ? await NativeStripeSdk.handleNextAction(
+            paymentIntentClientSecret,
+            returnURL ?? null
+          )
+        : await NativeStripeSdk.handleNextAction(paymentIntentClientSecret);
     if (error) {
       return {
         error,
@@ -243,7 +284,7 @@ export const handleCardAction = async (
     return {
       paymentIntent: paymentIntent!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       error: createError(error),
     };
@@ -252,13 +293,13 @@ export const handleCardAction = async (
 
 export const confirmSetupIntent = async (
   paymentIntentClientSecret: string,
-  data: ConfirmSetupIntent.Params,
-  options: ConfirmSetupIntent.Options = {}
+  params: SetupIntent.ConfirmParams,
+  options: SetupIntent.ConfirmOptions = {}
 ): Promise<ConfirmSetupIntentResult> => {
   try {
     const { setupIntent, error } = await NativeStripeSdk.confirmSetupIntent(
       paymentIntentClientSecret,
-      data,
+      params,
       options
     );
     if (error) {
@@ -269,9 +310,9 @@ export const confirmSetupIntent = async (
     return {
       setupIntent: setupIntent!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
@@ -291,9 +332,9 @@ export const createTokenForCVCUpdate = async (
     return {
       tokenId: tokenId!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
@@ -301,6 +342,58 @@ export const createTokenForCVCUpdate = async (
 export const handleURLCallback = async (url: string): Promise<boolean> => {
   const stripeHandled = await NativeStripeSdk.handleURLCallback(url);
   return stripeHandled;
+};
+
+export const verifyMicrodepositsForPayment = async (
+  clientSecret: string,
+  params: VerifyMicrodepositsParams
+): Promise<VerifyMicrodepositsForPaymentResult> => {
+  try {
+    const { paymentIntent, error } = (await NativeStripeSdk.verifyMicrodeposits(
+      true,
+      clientSecret,
+      params
+    )) as VerifyMicrodepositsForPaymentResult;
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      paymentIntent: paymentIntent!,
+    };
+  } catch (error: any) {
+    return {
+      error: createError(error),
+    };
+  }
+};
+
+export const verifyMicrodepositsForSetup = async (
+  clientSecret: string,
+  params: VerifyMicrodepositsParams
+): Promise<VerifyMicrodepositsForSetupResult> => {
+  try {
+    const { setupIntent, error } = (await NativeStripeSdk.verifyMicrodeposits(
+      false,
+      clientSecret,
+      params
+    )) as VerifyMicrodepositsForSetupResult;
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      setupIntent: setupIntent!,
+    };
+  } catch (error: any) {
+    return {
+      error: createError(error),
+    };
+  }
 };
 
 export const initPaymentSheet = async (
@@ -318,9 +411,9 @@ export const initPaymentSheet = async (
     return {
       paymentOption,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
@@ -336,11 +429,11 @@ export const presentPaymentSheet =
         };
       }
       return {
-        paymentOption: paymentOption,
+        paymentOption: paymentOption!,
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
-        error: createError(error),
+        error,
       };
     }
   };
@@ -355,12 +448,20 @@ export const confirmPaymentSheetPayment =
         };
       }
       return {};
-    } catch (error) {
+    } catch (error: any) {
       return {
-        error: createError(error),
+        error,
       };
     }
   };
+
+export const isGooglePaySupported = async (
+  params?: GooglePay.IsSupportedParams
+): Promise<boolean> => {
+  return (
+    isAndroid && (await NativeStripeSdk.isGooglePaySupported(params ?? {}))
+  );
+};
 
 export const initGooglePay = async (
   params: GooglePay.InitParams
@@ -373,15 +474,15 @@ export const initGooglePay = async (
       };
     }
     return {};
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
 
 export const presentGooglePay = async (
-  params: GooglePay.SetupIntentParams
+  params: GooglePay.PresentParams
 ): Promise<PayWithGooglePayResult> => {
   try {
     const { error } = await NativeStripeSdk.presentGooglePay(params);
@@ -391,9 +492,9 @@ export const presentGooglePay = async (
       };
     }
     return {};
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
@@ -412,9 +513,9 @@ export const createGooglePayPaymentMethod = async (
     return {
       paymentMethod: paymentMethod!,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error: createError(error),
+      error,
     };
   }
 };
@@ -428,9 +529,167 @@ export const openApplePaySetup = async (): Promise<OpenApplePaySetupResult> => {
       };
     }
     return {};
-  } catch (error) {
+  } catch (error: any) {
+    return {
+      error,
+    };
+  }
+};
+
+export const collectBankAccountForPayment = async (
+  clientSecret: string,
+  params: PaymentMethod.CollectBankAccountParams
+): Promise<CollectBankAccountForPaymentResult> => {
+  try {
+    const { paymentIntent, error } = (await NativeStripeSdk.collectBankAccount(
+      true,
+      clientSecret,
+      params
+    )) as CollectBankAccountForPaymentResult;
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      paymentIntent: paymentIntent!,
+    };
+  } catch (error: any) {
     return {
       error: createError(error),
     };
   }
 };
+
+export const collectBankAccountForSetup = async (
+  clientSecret: string,
+  params: PaymentMethod.CollectBankAccountParams
+): Promise<CollectBankAccountForSetupResult> => {
+  try {
+    const { setupIntent, error } = (await NativeStripeSdk.collectBankAccount(
+      false,
+      clientSecret,
+      params
+    )) as CollectBankAccountForSetupResult;
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      setupIntent: setupIntent!,
+    };
+  } catch (error: any) {
+    return {
+      error: createError(error),
+    };
+  }
+};
+
+/**
+ * Use collectBankAccountToken in the [Add a Financial Connections Account to a US Custom Connect](https://stripe.com/docs/financial-connections/connect-payouts) account flow.
+ * When called, it will load the Authentication Flow, an on-page modal UI which allows your user to securely link their external financial account for payouts.
+ * @param {string} clientSecret The client_secret of the [Financial Connections Session](https://stripe.com/docs/api/financial_connections/session).
+ * @returns A promise that resolves to an object containing either `session` and `token` fields, or an error field.
+ */
+export const collectBankAccountToken = async (
+  clientSecret: string
+): Promise<FinancialConnections.TokenResult> => {
+  try {
+    const { session, token, error } =
+      await NativeStripeSdk.collectBankAccountToken(clientSecret);
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      session: session!,
+      token: token!,
+    };
+  } catch (error: any) {
+    return {
+      error: createError(error),
+    };
+  }
+};
+
+/**
+ * Use collectFinancialConnectionsAccounts in the [Collect an account to build data-powered products](https://stripe.com/docs/financial-connections/other-data-powered-products) flow.
+ * When called, it will load the Authentication Flow, an on-page modal UI which allows your user to securely link their external financial account.
+ * @param {string} clientSecret The client_secret of the [Financial Connections Session](https://stripe.com/docs/api/financial_connections/session).
+ * @returns A promise that resolves to an object containing either a `session` field, or an error field.
+ */
+export const collectFinancialConnectionsAccounts = async (
+  clientSecret: string
+): Promise<FinancialConnections.SessionResult> => {
+  try {
+    const { session, error } =
+      await NativeStripeSdk.collectFinancialConnectionsAccounts(clientSecret);
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      session: session!,
+    };
+  } catch (error: any) {
+    return {
+      error: createError(error),
+    };
+  }
+};
+
+export const canAddCardToWallet = async (
+  params: CanAddCardToWalletParams
+): Promise<CanAddCardToWalletResult> => {
+  try {
+    const { canAddCard, details, error } =
+      await NativeStripeSdk.canAddCardToWallet(params);
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      canAddCard: canAddCard as boolean,
+      details: details,
+    };
+  } catch (error: any) {
+    return {
+      error: createError(error),
+    };
+  }
+};
+
+export const isCardInWallet = async (params: {
+  cardLastFour: string;
+}): Promise<IsCardInWalletResult> => {
+  try {
+    const { isInWallet, token, error } = await NativeStripeSdk.isCardInWallet(
+      params
+    );
+
+    if (error) {
+      return {
+        error,
+      };
+    }
+    return {
+      isInWallet: isInWallet as boolean,
+      token: token,
+    };
+  } catch (error: any) {
+    return {
+      error: createError(error),
+    };
+  }
+};
+
+export const Constants = NativeStripeSdk.getConstants();

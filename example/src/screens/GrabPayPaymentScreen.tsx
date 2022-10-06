@@ -1,4 +1,4 @@
-import type { PaymentMethodCreateParams } from '@stripe/stripe-react-native';
+import type { BillingDetails } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, TextInput } from 'react-native';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
@@ -20,7 +20,7 @@ export default function GrabPayPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'myr',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         request_three_d_secure: 'any',
         payment_method_types: ['grabpay'],
       }),
@@ -39,13 +39,15 @@ export default function GrabPayPaymentScreen() {
       return;
     }
 
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       name: 'John Doe',
     };
 
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'GrabPay',
-      billingDetails,
+      paymentMethodType: 'GrabPay',
+      paymentMethodData: {
+        billingDetails,
+      },
     });
 
     if (error) {
@@ -72,6 +74,7 @@ export default function GrabPayPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
     </PaymentScreen>

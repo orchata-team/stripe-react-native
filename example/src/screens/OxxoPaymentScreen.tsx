@@ -1,7 +1,4 @@
-import {
-  PaymentIntents,
-  PaymentMethodCreateParams,
-} from '@stripe/stripe-react-native';
+import { PaymentIntent, BillingDetails } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, TextInput } from 'react-native';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
@@ -23,7 +20,7 @@ export default function OxxoPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'mxn',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         request_three_d_secure: 'any',
         payment_method_types: ['oxxo'],
       }),
@@ -42,21 +39,21 @@ export default function OxxoPaymentScreen() {
       return;
     }
 
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       name: 'John Doe',
       email,
     };
 
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Oxxo',
-      billingDetails,
+      paymentMethodType: 'Oxxo',
+      paymentMethodData: { billingDetails },
     });
 
     if (error) {
       Alert.alert(`Error code: ${error.code}`, error.message);
       console.log('Payment confirmation error', error.message);
     } else if (paymentIntent) {
-      if (paymentIntent.status === PaymentIntents.Status.RequiresAction) {
+      if (paymentIntent.status === PaymentIntent.Status.RequiresAction) {
         Alert.alert(
           'Success',
           `The OXXO voucher was created successfully. Awaiting payment from customer.`
@@ -81,6 +78,7 @@ export default function OxxoPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
     </PaymentScreen>

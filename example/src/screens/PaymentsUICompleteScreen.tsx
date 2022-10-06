@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { Alert } from 'react-native';
 import {
   useStripe,
-  PaymentSheet,
+  BillingDetails,
+  Address,
   PaymentSheetError,
 } from '@stripe/stripe-react-native';
 import Button from '../components/Button';
 import PaymentScreen from '../components/PaymentScreen';
 import { API_URL } from '../Config';
+import appearance from './PaymentSheetAppearance';
 
 export default function PaymentsUICompleteScreen() {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [paymentSheetEnabled, setPaymentSheetEnabled] = useState(false);
-  const [loading, setLoadng] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [clientSecret, setClientSecret] = useState<string>();
 
   const fetchPaymentSheetParams = async () => {
@@ -35,7 +37,7 @@ export default function PaymentsUICompleteScreen() {
     if (!clientSecret) {
       return;
     }
-    setLoadng(true);
+    setLoading(true);
     const { error } = await presentPaymentSheet();
 
     if (!error) {
@@ -52,14 +54,14 @@ export default function PaymentsUICompleteScreen() {
       );
     }
     setPaymentSheetEnabled(false);
-    setLoadng(false);
+    setLoading(false);
   };
 
   const initialisePaymentSheet = async () => {
     const { paymentIntent, ephemeralKey, customer } =
       await fetchPaymentSheetParams();
 
-    const address: PaymentSheet.Address = {
+    const address: Address = {
       city: 'San Francisco',
       country: 'AT',
       line1: '510 Townsend St.',
@@ -67,7 +69,7 @@ export default function PaymentsUICompleteScreen() {
       postalCode: '94102',
       state: 'California',
     };
-    const billingDetails: PaymentSheet.BillingDetails = {
+    const billingDetails: BillingDetails = {
       name: 'Jane Doe',
       email: 'foo@bar.com',
       phone: '555-555-555',
@@ -80,15 +82,16 @@ export default function PaymentsUICompleteScreen() {
       paymentIntentClientSecret: paymentIntent,
       customFlow: false,
       merchantDisplayName: 'Example Inc.',
-      applePay: true,
-      merchantCountryCode: 'US',
+      applePay: { merchantCountryCode: 'US' },
       style: 'automatic',
-      googlePay: true,
-      testEnv: true,
-      primaryButtonColor: '#635BFF', // Blurple
+      googlePay: {
+        merchantCountryCode: 'US',
+        testEnv: true,
+      },
       returnURL: 'stripe-example://stripe-redirect',
       defaultBillingDetails: billingDetails,
       allowsDelayedPaymentMethods: true,
+      appearance,
     });
     if (!error) {
       setPaymentSheetEnabled(true);

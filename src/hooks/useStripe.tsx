@@ -1,12 +1,13 @@
 import type {
-  PaymentMethodCreateParams,
+  PaymentMethod,
+  PaymentIntent,
   ApplePay,
   PaymentSheet,
   CreatePaymentMethodResult,
   RetrievePaymentIntentResult,
   RetrieveSetupIntentResult,
   ConfirmPaymentResult,
-  HandleCardActionResult,
+  HandleNextActionResult,
   ConfirmSetupIntentResult,
   CreateTokenForCVCUpdateResult,
   ApplePayResult,
@@ -15,14 +16,22 @@ import type {
   InitPaymentSheetResult,
   PresentPaymentSheetResult,
   ConfirmPaymentSheetPaymentResult,
-  ConfirmSetupIntent,
+  SetupIntent,
   CreateTokenResult,
-  Card,
   PayWithGooglePayResult,
   GooglePayInitResult,
   GooglePay,
   CreateGooglePayPaymentMethodResult,
   OpenApplePaySetupResult,
+  Token,
+  VerifyMicrodepositsParams,
+  VerifyMicrodepositsForPaymentResult,
+  VerifyMicrodepositsForSetupResult,
+  CollectBankAccountForSetupResult,
+  CollectBankAccountForPaymentResult,
+  CanAddCardToWalletParams,
+  CanAddCardToWalletResult,
+  FinancialConnections,
 } from '../types';
 import { useCallback, useEffect, useState } from 'react';
 import { isiOS } from '../helpers';
@@ -35,7 +44,7 @@ import {
   confirmApplePayPayment,
   confirmSetupIntent,
   createTokenForCVCUpdate,
-  handleCardAction,
+  handleNextAction,
   handleURLCallback,
   presentApplePay,
   updateApplePaySummaryItems,
@@ -43,10 +52,18 @@ import {
   presentPaymentSheet,
   confirmPaymentSheetPayment,
   createToken,
+  isGooglePaySupported,
   initGooglePay,
   createGooglePayPaymentMethod,
   presentGooglePay,
   openApplePaySetup,
+  collectBankAccountForPayment,
+  collectBankAccountForSetup,
+  verifyMicrodepositsForPayment,
+  verifyMicrodepositsForSetup,
+  canAddCardToWallet,
+  collectBankAccountToken,
+  collectFinancialConnectionsAccounts,
 } from '../functions';
 
 /**
@@ -69,8 +86,8 @@ export function useStripe() {
 
   const _createPaymentMethod = useCallback(
     async (
-      data: PaymentMethodCreateParams.Params,
-      options: PaymentMethodCreateParams.Options = {}
+      data: PaymentMethod.CreateParams,
+      options: PaymentMethod.CreateOptions = {}
     ): Promise<CreatePaymentMethodResult> => {
       return createPaymentMethod(data, options);
     },
@@ -78,7 +95,7 @@ export function useStripe() {
   );
 
   const _createToken = useCallback(
-    async (params: Card.CreateTokenParams): Promise<CreateTokenResult> => {
+    async (params: Token.CreateParams): Promise<CreateTokenResult> => {
       return createToken(params);
     },
     []
@@ -101,8 +118,8 @@ export function useStripe() {
   const _confirmPayment = useCallback(
     async (
       paymentIntentClientSecret: string,
-      data: PaymentMethodCreateParams.Params,
-      options: PaymentMethodCreateParams.Options = {}
+      data?: PaymentIntent.ConfirmParams,
+      options: PaymentIntent.ConfirmOptions = {}
     ): Promise<ConfirmPaymentResult> => {
       return confirmPayment(paymentIntentClientSecret, data, options);
     },
@@ -138,11 +155,12 @@ export function useStripe() {
     []
   );
 
-  const _handleCardAction = useCallback(
+  const _handleNextAction = useCallback(
     async (
-      paymentIntentClientSecret: string
-    ): Promise<HandleCardActionResult> => {
-      return handleCardAction(paymentIntentClientSecret);
+      paymentIntentClientSecret: string,
+      returnURL?: string
+    ): Promise<HandleNextActionResult> => {
+      return handleNextAction(paymentIntentClientSecret, returnURL);
     },
     []
   );
@@ -150,8 +168,8 @@ export function useStripe() {
   const _confirmSetupIntent = useCallback(
     async (
       paymentIntentClientSecret: string,
-      data: ConfirmSetupIntent.Params,
-      options: ConfirmSetupIntent.Options = {}
+      data: SetupIntent.ConfirmParams,
+      options: SetupIntent.ConfirmOptions = {}
     ): Promise<ConfirmSetupIntentResult> => {
       return confirmSetupIntent(paymentIntentClientSecret, data, options);
     },
@@ -191,6 +209,13 @@ export function useStripe() {
     []
   );
 
+  const _isGooglePaySupported = useCallback(
+    async (params?: GooglePay.IsSupportedParams): Promise<boolean> => {
+      return isGooglePaySupported(params);
+    },
+    []
+  );
+
   const _initGooglePay = useCallback(
     async (params: GooglePay.InitParams): Promise<GooglePayInitResult> => {
       return initGooglePay(params);
@@ -200,7 +225,7 @@ export function useStripe() {
 
   const _presentGooglePay = useCallback(
     async (
-      params: GooglePay.PresentGooglePayParams
+      params: GooglePay.PresentParams
     ): Promise<PayWithGooglePayResult> => {
       return presentGooglePay(params);
     },
@@ -221,12 +246,77 @@ export function useStripe() {
       return openApplePaySetup();
     }, []);
 
+  const _collectBankAccountForPayment = useCallback(
+    async (
+      clientSecret: string,
+      params: PaymentMethod.CollectBankAccountParams
+    ): Promise<CollectBankAccountForPaymentResult> => {
+      return collectBankAccountForPayment(clientSecret, params);
+    },
+    []
+  );
+
+  const _collectBankAccountForSetup = useCallback(
+    async (
+      clientSecret: string,
+      params: PaymentMethod.CollectBankAccountParams
+    ): Promise<CollectBankAccountForSetupResult> => {
+      return collectBankAccountForSetup(clientSecret, params);
+    },
+    []
+  );
+
+  const _verifyMicrodepositsForPayment = useCallback(
+    async (
+      clientSecret: string,
+      params: VerifyMicrodepositsParams
+    ): Promise<VerifyMicrodepositsForPaymentResult> => {
+      return verifyMicrodepositsForPayment(clientSecret, params);
+    },
+    []
+  );
+
+  const _verifyMicrodepositsForSetup = useCallback(
+    async (
+      clientSecret: string,
+      params: VerifyMicrodepositsParams
+    ): Promise<VerifyMicrodepositsForSetupResult> => {
+      return verifyMicrodepositsForSetup(clientSecret, params);
+    },
+    []
+  );
+
+  const _canAddCardToWallet = useCallback(
+    async (
+      params: CanAddCardToWalletParams
+    ): Promise<CanAddCardToWalletResult> => {
+      return canAddCardToWallet(params);
+    },
+    []
+  );
+
+  const _collectBankAccountToken = useCallback(
+    async (clientSecret: string): Promise<FinancialConnections.TokenResult> => {
+      return collectBankAccountToken(clientSecret);
+    },
+    []
+  );
+
+  const _collectFinancialConnectionsAccounts = useCallback(
+    async (
+      clientSecret: string
+    ): Promise<FinancialConnections.SessionResult> => {
+      return collectFinancialConnectionsAccounts(clientSecret);
+    },
+    []
+  );
+
   return {
     retrievePaymentIntent: _retrievePaymentIntent,
     retrieveSetupIntent: _retrieveSetupIntent,
     confirmPayment: _confirmPayment,
     createPaymentMethod: _createPaymentMethod,
-    handleCardAction: _handleCardAction,
+    handleNextAction: _handleNextAction,
     isApplePaySupported: isApplePaySupported,
     presentApplePay: _presentApplePay,
     confirmApplePayPayment: _confirmApplePayPayment,
@@ -238,9 +328,17 @@ export function useStripe() {
     presentPaymentSheet: _presentPaymentSheet,
     initPaymentSheet: _initPaymentSheet,
     createToken: _createToken,
+    isGooglePaySupported: _isGooglePaySupported,
     initGooglePay: _initGooglePay,
     presentGooglePay: _presentGooglePay,
     createGooglePayPaymentMethod: _createGooglePayPaymentMethod,
     openApplePaySetup: _openApplePaySetup,
+    collectBankAccountForPayment: _collectBankAccountForPayment,
+    collectBankAccountForSetup: _collectBankAccountForSetup,
+    verifyMicrodepositsForPayment: _verifyMicrodepositsForPayment,
+    verifyMicrodepositsForSetup: _verifyMicrodepositsForSetup,
+    canAddCardToWallet: _canAddCardToWallet,
+    collectBankAccountToken: _collectBankAccountToken,
+    collectFinancialConnectionsAccounts: _collectFinancialConnectionsAccounts,
   };
 }

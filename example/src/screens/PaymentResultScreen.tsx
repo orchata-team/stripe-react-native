@@ -3,7 +3,7 @@ import { PaymentIntent, useStripe } from '@stripe/stripe-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from './HomeScreen';
+import type { RootStackParamList } from '../App';
 import PaymentScreen from '../components/PaymentScreen';
 
 type ScreenRouteProp = RouteProp<RootStackParamList, 'PaymentResultScreen'>;
@@ -15,7 +15,7 @@ type Props = {
 export default function PaymentResultScreen({ route }: Props) {
   const [result, setResult] = useState<string>();
   const [paymentIntentResult, setPaymentIntentResult] =
-    useState<PaymentIntent>();
+    useState<PaymentIntent.Result>();
   const { retrievePaymentIntent } = useStripe();
 
   const retrievePaymentIntentObject = useCallback(
@@ -35,7 +35,7 @@ export default function PaymentResultScreen({ route }: Props) {
 
   useEffect(() => {
     const { url } = route.params;
-    const paymentIntentClientSecret = /payment_intent_client_secret=(.*)&/.exec(
+    const paymentIntentClientSecret = /payment_intent_client_secret=[^&]*/.exec(
       url
     );
 

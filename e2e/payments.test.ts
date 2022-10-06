@@ -1,19 +1,20 @@
 /* eslint-disable no-undef */
-import { getElementByText, getTextInputByPlaceholder } from './helpers';
+import {
+  getElementByText,
+  getTextInputByPlaceholder,
+  clickButtonContainingText,
+} from './helpers';
 import BasicPaymentScreen from './screenObject/BasicPaymentScreen';
 import cardField from './screenObject/components/CardField';
 import homeScreen from './screenObject/HomeScreen';
 import BECSForm from './screenObject/components/BECSForm';
 
-type WDIO = { saveScreen: (name: string) => void } & WebdriverIO.Browser;
-
-describe('Example app payments scenarios (common)', () => {
+describe('Common payment scenarios', () => {
   beforeEach(() => {
     $('~app-root').waitForDisplayed({ timeout: 30000 });
   });
 
   afterEach(() => {
-    (driver as WDIO).saveScreen(`screen-${new Date().getTime()}`);
     driver.reloadSession();
   });
 
@@ -22,7 +23,7 @@ describe('Example app payments scenarios (common)', () => {
   //   homeScreen.goTo('Wallets');
   //   homeScreen.goTo('WeChat Pay');
 
-  //   $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+  //   $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
   //   BasicPaymentScreen.pay({ email: 'test@stripe.com' });
 
@@ -65,7 +66,7 @@ describe('Example app payments scenarios (common)', () => {
     homeScreen.goTo('Bank Debits');
     homeScreen.goTo('BECS Direct Debit set up');
 
-    $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
     BECSForm.setName('stripe');
     BECSForm.setEmail('test@stripe.com');
@@ -89,7 +90,7 @@ describe('Example app payments scenarios (common)', () => {
     homeScreen.goTo('Bank Debits');
     homeScreen.goTo('SEPA Direct Debit payment');
 
-    $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
     BasicPaymentScreen.pay({
       email: 'test@stripe.com',
@@ -103,7 +104,7 @@ describe('Example app payments scenarios (common)', () => {
     homeScreen.goTo('Bank Debits');
     homeScreen.goTo('SEPA Direct Debit set up');
 
-    $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
     BasicPaymentScreen.pay({
       email: 'test@stripe.com',
@@ -118,7 +119,7 @@ describe('Example app payments scenarios (common)', () => {
     homeScreen.goTo('Accept a payment');
     homeScreen.goTo('Card element only');
 
-    $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
     cardField.setCardNumber('4242424242424242');
     cardField.setExpiryDate('12/22');
@@ -140,7 +141,7 @@ describe('Example app payments scenarios (common)', () => {
     homeScreen.goTo('More payment scenarios');
     homeScreen.goTo('Set up future payments');
 
-    $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
     getTextInputByPlaceholder('E-mail').setValue('test@stripe.com');
 
@@ -148,7 +149,7 @@ describe('Example app payments scenarios (common)', () => {
     cardField.setExpiryDate('12/22');
     cardField.setCvcNumber('123');
 
-    getElementByText('Save').click();
+    getElementByText('Save via card input form').click();
     const alert = getElementByText('Success');
     alert.waitForDisplayed({
       timeout: 20000,
@@ -161,7 +162,7 @@ describe('Example app payments scenarios (common)', () => {
     homeScreen.goTo('More payment scenarios');
     homeScreen.goTo('Finalize payments on the server');
 
-    $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
     cardField.setCardNumber('4242424242424242');
     cardField.setExpiryDate('12/22');
@@ -180,7 +181,7 @@ describe('Example app payments scenarios (common)', () => {
     homeScreen.goTo('More payment scenarios');
     homeScreen.goTo('Recollect a CVC');
 
-    $('~payment-screen').waitForDisplayed({ timeout: 15000 });
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
 
     getTextInputByPlaceholder('E-mail').setValue('test_pm@stripe.com');
     getTextInputByPlaceholder('CVC').setValue('123');
@@ -191,5 +192,111 @@ describe('Example app payments scenarios (common)', () => {
       timeout: 20000,
     });
     expect(alert.getText()).toEqual('Success');
+  });
+
+  it('Create tokens with a bank account and with a card', function () {
+    this.retries(1);
+    homeScreen.goTo('More payment scenarios');
+    homeScreen.goTo('Create tokens');
+
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
+
+    getElementByText('Create a PII token').click();
+    let alert = getElementByText('Success');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    expect(alert.getText()).toEqual('Success');
+    alert.dismissAlert();
+
+    getElementByText('Create a token from a bank account').click();
+    alert = getElementByText('Success');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    expect(alert.getText()).toEqual('Success');
+    alert.dismissAlert();
+
+    cardField.setCardNumber('4242424242424242');
+    cardField.setExpiryDate('12/22');
+    cardField.setCvcNumber('123');
+    getElementByText('Create a token from a card').click();
+    alert = getElementByText('Success');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    expect(alert.getText()).toEqual('Success');
+  });
+
+  it('ACH Payment', function () {
+    this.retries(2);
+
+    homeScreen.goTo('Bank Debits');
+    homeScreen.goTo('ACH payment');
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
+
+    clickButtonContainingText('Collect bank account');
+
+    BasicPaymentScreen.authorizeACH();
+
+    let alert = getElementByText('Requires Confirmation');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    alert.dismissAlert();
+
+    clickButtonContainingText('Confirm');
+    driver.pause(3000);
+
+    alert = getElementByText('Awaiting verification');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    alert.dismissAlert();
+
+    getElementByText('Verify microdeposit').click();
+    driver.pause(3000);
+
+    alert = getElementByText('Processing');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    alert.dismissAlert();
+  });
+
+  it('ACH Setup', function () {
+    this.retries(2);
+
+    homeScreen.goTo('Bank Debits');
+    homeScreen.goTo('ACH setup');
+    $('~payment-screen').waitForDisplayed({ timeout: 30000 });
+
+    clickButtonContainingText('Collect bank account');
+
+    BasicPaymentScreen.authorizeACH();
+
+    let alert = getElementByText('Requires Confirmation');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    alert.dismissAlert();
+
+    clickButtonContainingText('Confirm');
+    driver.pause(3000);
+
+    alert = getElementByText('Awaiting verification');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    alert.dismissAlert();
+
+    getElementByText('Verify microdeposit').click();
+    driver.pause(3000);
+
+    alert = getElementByText('Succeeded');
+    alert.waitForDisplayed({
+      timeout: 20000,
+    });
+    alert.dismissAlert();
   });
 });

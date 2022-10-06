@@ -35,6 +35,10 @@ project.xcworkspace
 .gradle
 local.properties
 android.iml
+*.hprof
+android/build/
+android/build/reports
+example/android/app/build/reports
 
 # Cocoapods
 #
@@ -64,3 +68,9 @@ dist/
 
 # Docs
 docs/api-reference/
+
+# Appium Screenshots
+.tmp/screenshots
+
+# Local stripe-android dependency
+example/android/stripe-android

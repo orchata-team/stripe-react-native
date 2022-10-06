@@ -111,7 +111,7 @@ _before:_
 			Month: ${params.expMonth || '-'}
 			Year: ${params.expYear || '-'}
 			CVC: ${params.cvc || '-'}
-`		)
+`		);
 	}}
 />
 ```
@@ -121,29 +121,29 @@ _after:_
 
 ```tsx
 <CardField
-	postalCodeEnabled={false}
-	autofocus
-	placeholder={{
-		number: '4242 4242 4242 4242',
-		postalCode: '12345',
-		cvc: 'CVC',
-		expiration: 'MM|YY',
-	}}
-	onCardChange={(cardDetails) => {
-		console.log('cardDetails', cardDetails);
-	}}
-	onFocus={(focusedField) => {
-		console.log('focusField', focusedField);
-	}}
-	cardStyle={{
-		borderWidth: 1,
-		backgroundColor: '#FFFFFF',
-		borderColor: '#000000',
-		borderRadius: 8,
-		fontSize: 14,
-		placeholderColor: '#999999',
-	}}
-	style={{ width: 100%, height: 200 }}
+  postalCodeEnabled={false}
+  autofocus
+  placeholders={{
+    number: '4242 4242 4242 4242',
+    postalCode: '12345',
+    cvc: 'CVC',
+    expiration: 'MM|YY',
+  }}
+  onCardChange={(cardDetails) => {
+    console.log('cardDetails', cardDetails);
+  }}
+  onFocus={(focusedField) => {
+    console.log('focusField', focusedField);
+  }}
+  cardStyle={{
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#000000',
+    borderRadius: 8,
+    fontSize: 14,
+    placeholderColor: '#999999',
+  }}
+  style={{ width: '100%', height: 200 }}
 />
 ```
 
@@ -152,14 +152,14 @@ or
 
 ```tsx
 <CardForm
-	autofocus
-	cardStyle={{
-		backgroundColor: '#FFFFFF',
-	}}
-	style={{ width: 100%, height: 350 }}
-	onFormComplete={(cardDetails) => {
-		setComplete(cardDetails.complete);
-	}}
+  autofocus
+  cardStyle={{
+    backgroundColor: '#FFFFFF',
+  }}
+  style={{ width: '100%', height: 350 }}
+  onFormComplete={(cardDetails) => {
+    setComplete(cardDetails.complete);
+  }}
 />
 ```
 
@@ -194,9 +194,9 @@ _after_:
 ```tsx
 // ...
 const { paymentMethod, error } = await createPaymentMethod({
-  type: 'Card',
-  billingDetails: {
-    email: 'email@stripe.com',
+  paymentMethodType: 'Card',
+  paymentMethodData: {
+    billingDetails,
   }, // optional
 });
 
@@ -217,10 +217,10 @@ await stripe.authenticatePaymentIntent({ clientSecret: 'client_secret' });
 ```
 
 _after:_
-[handleCardAction](https://stripe.dev/stripe-react-native/api-reference/modules.html#handleCardAction)
+[handleNextAction](https://stripe.dev/stripe-react-native/api-reference/modules.html#handleNextAction)
 
 ```tsx
-const { error, paymentIntent } = await handleCardAction('client_secret');
+const { error, paymentIntent } = await handleNextAction('client_secret');
 ```
 
 ## Confirm payment Intent - Automatic
@@ -240,7 +240,7 @@ const confirmPaymentResult = await stripe.confirmPaymentIntent({
 			expYear: 2040,
 			number: '4000002500003155',
 		}
-	})
+	});
 ```
 
 _after:_
@@ -249,8 +249,10 @@ _after:_
 ```tsx
 // ...
 const { error, paymentIntent } = await confirmPayment('client_secret', {
-	type:  'Card',
-	billingDetails: {...},
+	paymentMethodType:  'Card',
+  paymentMethodData: {
+	  billingDetails: {...},
+  }
 });
 
 // ...
@@ -260,7 +262,7 @@ return (
     style={{ width: '100%', height: 100 }}
     postalCodeEnabled={true}
   />
-)
+);
 ```
 
 ## Set up future payments
@@ -314,7 +316,7 @@ return (
 	{isApplePaySupported && (
 		<Button onPress={pay} />
 	)}
-)
+);
 ```
 
 _after:_
@@ -330,7 +332,7 @@ return (
 	{isApplePaySupported && (
 		<Button onPress={pay} />
 	)}
-)
+);
 ```
 
 if your application doesn't use functional components, as an alternative you can import `isApplePaySupported` method directly.
@@ -481,7 +483,7 @@ const { error: presentError } = await presentGooglePay({
 });
 ```
 
-As against to `tipsi-stripe`, `stripe-react-native` provide separate API for GooglePay, please refer to the [documentation](https://github.com/stripe/stripe-react-native/blob/master/docs/GooglePay.md) for more details.
+As against to `tipsi-stripe`, `stripe-react-native` provide separate API for GooglePay, please refer to the [documentation](https://stripe.com/docs/google-pay?platform=react-native) for more details.
 
 ## Create a token
 
@@ -515,18 +517,18 @@ _after:_
 ```tsx
 const { createToken } = useStripe()
 // ...
-const { token, error } = createToken({
+const { token, error } = await createToken({
 	type: 'Card'
 	address: {
 		country: 'US',
 		// ...
 	},
 	name: 'card_name'
-})
+});
 // ...
 return (
  <CardField
     style={{ width: '100%', height: 100 }}
   />
-)
+);
 ```

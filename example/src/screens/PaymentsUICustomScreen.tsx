@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, View } from 'react-native';
-import { useStripe, PaymentSheet } from '@stripe/stripe-react-native';
+import {
+  useStripe,
+  Address,
+  BillingDetails,
+} from '@stripe/stripe-react-native';
 import { colors } from '../colors';
 import Button from '../components/Button';
 import PaymentScreen from '../components/PaymentScreen';
@@ -39,7 +43,7 @@ export default function PaymentsUICustomScreen() {
       const { paymentIntent, ephemeralKey, customer } =
         await fetchPaymentSheetParams();
 
-      const address: PaymentSheet.Address = {
+      const address: Address = {
         city: 'San Francisco',
         country: 'AT',
         line1: '510 Townsend St.',
@@ -47,7 +51,7 @@ export default function PaymentsUICustomScreen() {
         postalCode: '94102',
         state: 'California',
       };
-      const billingDetails: PaymentSheet.BillingDetails = {
+      const billingDetails: BillingDetails = {
         name: 'Jane Doe',
         email: 'foo@bar.com',
         phone: '555-555-555',
@@ -60,12 +64,11 @@ export default function PaymentsUICustomScreen() {
         paymentIntentClientSecret: paymentIntent,
         customFlow: true,
         merchantDisplayName: 'Example Inc.',
-        applePay: true,
-        merchantCountryCode: 'US',
+        applePay: {
+          merchantCountryCode: 'US',
+        },
         style: 'automatic',
-        googlePay: true,
-        testEnv: true,
-        primaryButtonColor: '#635BFF', // Blurple
+        googlePay: { merchantCountryCode: 'US', testEnv: true },
         returnURL: 'stripe-example://stripe-redirect',
         defaultBillingDetails: billingDetails,
       });

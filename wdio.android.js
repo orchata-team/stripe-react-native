@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 // TODO: extend common config - need to figure out why it doesn't work on CI for now
 // const config = require('./wdio.conf');
 
@@ -22,22 +23,7 @@ exports.config = {
   waitforTimeout: 8000,
   connectionRetryTimeout: 200000,
   connectionRetryCount: 4,
-  services: [
-    'appium',
-    [
-      'native-app-compare',
-      {
-        baselineFolder: 'test/baseline',
-        formatImageName: '{tag}-{logName}-{width}x{height}',
-        screenshotPath: '.tmp/',
-        savePerInstance: true,
-        autoSaveBaseline: true,
-        blockOutStatusBar: true,
-        blockOutToolBar: true,
-        isHybridApp: true,
-      },
-    ],
-  ],
+  services: ['appium'],
   framework: 'mocha',
   reporters: ['spec'],
   mochaOpts: {
@@ -45,21 +31,27 @@ exports.config = {
     timeout: 200000,
   },
   specFileRetries: 1,
-  specs: ['./e2e/*.test.android.ts', './e2e/*.test.ts'],
+  specs: ['./e2e/*.test.ts'],
   capabilities: [
     {
       maxInstances: 1,
       browserName: '',
-      appiumVersion: '1.21.0',
-      platformVersion: '',
+      appiumVersion: '1.22.1',
       platformName: 'Android',
-      deviceName: '',
       app: 'example/android/app/build/outputs/apk/release/app-release.apk',
       automationName: 'UiAutomator2',
-      chromedriverUseSystemExecutable: true,
       ignoreHiddenApiPolicyError: true,
-      noReset: true,
       enableWebviewDetailsCollection: true,
+      avdArgs: '-wipe-data',
+      autoGrantPermissions: true,
+      androidInstallTimeout: 200000,
     },
   ],
+  afterTest: function (test, _context, { passed }) {
+    if (!passed) {
+      driver.saveScreenshot(
+        '.tmp/screenshots/' + test.title.replace(/\s+/g, '') + '-android.png'
+      );
+    }
+  },
 };

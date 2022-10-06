@@ -32,15 +32,20 @@ app.use(
 );
 
 // tslint:disable-next-line: interface-name
-interface Order {
-  items: object[];
-}
+const itemIdToPrice: { [id: string]: number } = {
+  'id-1': 1400,
+  'id-2': 2000,
+  'id-3': 3000,
+  'id-4': 4000,
+  'id-5': 5000,
+};
 
-const calculateOrderAmount = (_order?: Order): number => {
-  // Replace this constant with a calculation of the order's amount.
-  // Calculate the order total on the server to prevent
-  // people from directly manipulating the amount on the client.
-  return 1400;
+const calculateOrderAmount = (itemIds: string[] = ['id-1']): number => {
+  const total = itemIds
+    .map((id) => itemIdToPrice[id])
+    .reduce((prev, curr) => prev + curr, 0);
+
+  return total;
 };
 
 function getKeys(payment_method?: string) {
@@ -97,7 +102,7 @@ app.post(
       client = 'ios',
     }: {
       email: string;
-      items: Order;
+      items: string[];
       currency: string;
       payment_method_types: string[];
       request_three_d_secure: 'any' | 'automatic';
@@ -139,7 +144,7 @@ app.post(
       return res.send({
         clientSecret: paymentIntent.client_secret,
       });
-    } catch (error) {
+    } catch (error: any) {
       return res.send({
         error: error.raw.message,
       });
@@ -159,7 +164,7 @@ app.post(
       request_three_d_secure,
       email,
     }: {
-      items: Order;
+      items: string[];
       currency: string;
       request_three_d_secure: 'any' | 'automatic';
       email: string;
@@ -235,7 +240,7 @@ app.post(
       paymentMethodId?: string;
       paymentIntentId?: string;
       cvcToken?: string;
-      items: Order;
+      items: string[];
       currency: string;
       useStripeSdk: boolean;
       email?: string;
@@ -289,6 +294,7 @@ app.post(
           },
           use_stripe_sdk: useStripeSdk,
           customer: customers.data[0].id,
+          return_url: 'stripe-example://stripe-redirect',
         };
         const intent = await stripe.paymentIntents.create(params);
         return res.send(generateResponse(intent));
@@ -303,6 +309,7 @@ app.post(
           // If a mobile client passes `useStripeSdk`, set `use_stripe_sdk=true`
           // to take advantage of new authentication features in mobile SDKs.
           use_stripe_sdk: useStripeSdk,
+          return_url: 'stripe-example://stripe-redirect',
         };
         const intent = await stripe.paymentIntents.create(params);
         // After create, if the PaymentIntent's status is succeeded, fulfill the order.
@@ -316,7 +323,7 @@ app.post(
       }
 
       return res.sendStatus(400);
-    } catch (e) {
+    } catch (e: any) {
       // Handle "hard declines" e.g. insufficient funds, expired card, etc
       // See https://stripe.com/docs/declines/codes for more.
       return res.send({ error: e.message });
@@ -336,9 +343,27 @@ app.post('/create-setup-intent', async (req, res) => {
     typescript: true,
   });
   const customer = await stripe.customers.create({ email });
+
+  const payPalIntentPayload = {
+    return_url: 'https://example.com/setup/complete',
+    payment_method_options: { paypal: { currency: 'eur' } },
+    payment_method_data: { type: 'paypal' },
+    mandate_data: {
+      customer_acceptance: {
+        type: 'online',
+        online: {
+          ip_address: '',
+          user_agent: '',
+        },
+      },
+    },
+    confirm: true,
+  };
+
+  //@ts-ignore
   const setupIntent = await stripe.setupIntents.create({
-    customer: customer.id,
-    payment_method_types,
+    ...{ customer: customer.id, payment_method_types },
+    ...(payment_method_types?.includes('paypal') ? payPalIntentPayload : {}),
   });
 
   // Send publishable key and SetupIntent details to client
@@ -459,7 +484,7 @@ app.post('/charge-card-off-session', async (req, res) => {
       clientSecret: paymentIntent.client_secret,
       publicKey: stripePublishableKey,
     });
-  } catch (err) {
+  } catch (err: any) {
     if (err.code === 'authentication_required') {
       // Bring the customer back on-session to authenticate the purchase
       // You can do this by sending an email or app notification to let them know
@@ -519,15 +544,148 @@ app.post('/payment-sheet', async (_, res) => {
     { apiVersion: '2020-08-27' }
   );
   const paymentIntent = await stripe.paymentIntents.create({
-    amount: 1099,
+    amount: 5099,
     currency: 'usd',
     customer: customer.id,
+    shipping: {
+      name: 'Jane Doe',
+      address: {
+        state: 'Texas',
+        city: 'Houston',
+        line1: '1459  Circle Drive',
+        postal_code: '77063',
+        country: 'US',
+      },
+    },
+    // Edit the following to support different payment methods in your PaymentSheet
+    // Note: some payment methods have different requirements: https://stripe.com/docs/payments/payment-methods/integration-options
+    payment_method_types: [
+      'card',
+      // 'ideal',
+      // 'sepa_debit',
+      // 'sofort',
+      // 'bancontact',
+      // 'p24',
+      // 'giropay',
+      // 'eps',
+      // 'afterpay_clearpay',
+      // 'klarna',
+      // 'us_bank_account',
+    ],
   });
   return res.json({
     paymentIntent: paymentIntent.client_secret,
     ephemeralKey: ephemeralKey.secret,
     customer: customer.id,
   });
+});
+
+app.post('/payment-sheet-subscription', async (_, res) => {
+  const { secret_key } = getKeys();
+
+  const stripe = new Stripe(secret_key as string, {
+    apiVersion: '2020-08-27',
+    typescript: true,
+  });
+
+  const customers = await stripe.customers.list();
+
+  // Here, we're getting latest customer only for example purposes.
+  const customer = customers.data[0];
+
+  if (!customer) {
+    return res.send({
+      error: 'You have no customer created',
+    });
+  }
+
+  const ephemeralKey = await stripe.ephemeralKeys.create(
+    { customer: customer.id },
+    { apiVersion: '2020-08-27' }
+  );
+  const subscription = await stripe.subscriptions.create({
+    customer: customer.id,
+    items: [{ price: 'price_1L3hcFLu5o3P18Zp9GDQEnqe' }],
+    trial_period_days: 3,
+  });
+
+  if (typeof subscription.pending_setup_intent === 'string') {
+    const setupIntent = await stripe.setupIntents.retrieve(
+      subscription.pending_setup_intent
+    );
+
+    return res.json({
+      setupIntent: setupIntent.client_secret,
+      ephemeralKey: ephemeralKey.secret,
+      customer: customer.id,
+    });
+  } else {
+    throw new Error(
+      'Expected response type string, but received: ' +
+        typeof subscription.pending_setup_intent
+    );
+  }
+});
+
+app.post('/ephemeral-key', async (req, res) => {
+  const { secret_key } = getKeys();
+
+  const stripe = new Stripe(secret_key as string, {
+    apiVersion: req.body.apiVersion,
+    typescript: true,
+  });
+
+  let key = await stripe.ephemeralKeys.create(
+    { issuing_card: req.body.issuingCardId },
+    { apiVersion: req.body.apiVersion }
+  );
+
+  return res.send(key);
+});
+
+app.post('/issuing-card-details', async (req, res) => {
+  const { secret_key } = getKeys();
+
+  const stripe = new Stripe(secret_key as string, {
+    apiVersion: '2020-08-27',
+    typescript: true,
+  });
+
+  let card = await stripe.issuing.cards.retrieve(req.body.id);
+
+  if (!card) {
+    return res.send({
+      error: 'No card with that ID exists.',
+    });
+  }
+
+  return res.send(card);
+});
+
+app.post('/financial-connections-sheet', async (_, res) => {
+  const { secret_key } = getKeys();
+
+  const stripe = new Stripe(secret_key as string, {
+    apiVersion: '2020-08-27',
+    typescript: true,
+  });
+
+  const account = await stripe.accounts.create({
+    country: 'US',
+    type: 'custom',
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
+  });
+
+  const session = await stripe.financialConnections.sessions.create({
+    account_holder: { type: 'account', account: account.id },
+    filters: { countries: ['US'] },
+    permissions: ['ownership', 'payment_method'],
+  });
+
+  return res.send({ clientSecret: session.client_secret });
 });
 
 app.listen(4242, (): void =>

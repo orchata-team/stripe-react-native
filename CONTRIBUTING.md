@@ -4,31 +4,25 @@ We want this community to be friendly and respectful to each other. Please follo
 
 ## Development workflow
 
-To get started with the project, run `yarn bootstrap` in the root directory to install the required dependencies for each package:
+### Running the example app
 
-```sh
-yarn bootstrap
-```
+- Install the dependencies
+  - `yarn bootstrap`
+- Set up env vars
+  - `cp example/.env.example example/.env` and set the variable values in your newly created `.env` file.
+- Start the example
+  - Terminal 1: `yarn example start:server`
+  - Terminal 2: `yarn example start`
+  - Terminal 3: depending on what platform you want to build for run either
+    - `yarn example ios`
+    - or
+    - `yarn example android`
 
-While developing, you can run the [example app](/example/) to test your changes.
+To edit the Objective-C files, open `example/ios/StripeSdkExample.xcworkspace` in XCode and find the source files at `Pods > Development Pods > stripe-react-native`.
 
-To start the packager:
+To edit the Kotlin files, open `example/android` in Android studio and find the source files at `reactnativestripesdk` under `Android`.
 
-```sh
-yarn example start
-```
-
-To run the example app on Android:
-
-```sh
-yarn example android
-```
-
-To run the example app on iOS:
-
-```sh
-yarn example ios
-```
+Use your editor of choice for editing the Typescript files in `src/` and `example/`.
 
 Make sure your code passes TypeScript and ESLint. Run the following to verify:
 
@@ -43,15 +37,21 @@ To fix formatting errors, run the following:
 yarn lint --fix
 ```
 
-Remember to add tests for your change if possible. Run the unit tests by:
+Remember to add tests for your change if possible. End to end tests are done with Appium, and can be found in `e2e/`. Read the [test section below](#tests) for more details on setup.
 
-```sh
-yarn test
-```
+## Testing inside of the Expo Go app
 
-To edit the Objective-C files, open `example/ios/StripeSdkExample.xcworkspace` in XCode and find the source files at `Pods > Development Pods > stripe-react-native`.
+> This section only needs to be done during an Expo SDK release.
 
-To edit the Kotlin files, open `example/android` in Android studio and find the source files at `reactnativestripesdk` under `Android`.
+Inside of the Expo Go app, you are limited to using the `react-native` version that comes bundled inside. To test the example app accurately, you must modify `example/package.json` by:
+
+1. Navigate to the example app directory: `cd example/`
+2. Install the Expo SDK: `yarn add expo`
+3. Set the `sdkVersion` in `example/app.json` to the version you want to test
+4. Install the proper versions of `react` and `react-native`: `expo install react react-native`
+   - There may be other dependencies to update. If there are, it will be indicated in the logs when running the app.
+5. Use `expo client:install:[android|ios]` to install Expo Go on your simulator
+6. Run `expo start` to run the app.
 
 ### Install library as local repository
 
@@ -95,7 +95,7 @@ In order to do that, edit .npmrc accordinly to https://raw.githubusercontent.com
 e.g. when you have `71.0.3578` chrome version installed you must specify `2.46` version of chrome-driver.
 
 1. run `yarn run-example-ios` / `yarn run-example-android` to build and open example app.
-2. run `yarn test:ios` / `yarn test:android` to run e2e tests.
+2. run `yarn test:e2e:ios` / `yarn test:e2e:android` to run e2e tests.
 
 ### Scripts
 

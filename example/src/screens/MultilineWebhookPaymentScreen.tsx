@@ -1,7 +1,4 @@
-import type {
-  CardFormView,
-  PaymentMethodCreateParams,
-} from '@stripe/stripe-react-native';
+import type { CardFormView, BillingDetails } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -34,7 +31,7 @@ export default function MultilineWebhookPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'usd',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         // request_three_d_secure: 'any',
       }),
     });
@@ -48,23 +45,28 @@ export default function MultilineWebhookPaymentScreen() {
     const clientSecret = await fetchPaymentIntentClientSecret();
 
     // 2. Gather customer billing information (ex. email)
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       email: 'email@stripe.com',
       phone: '+48888000888',
-      addressCity: 'Houston',
-      addressCountry: 'US',
-      addressLine1: '1459  Circle Drive',
-      addressLine2: 'Texas',
-      addressPostalCode: '77063',
+      address: {
+        city: 'Houston',
+        country: 'US',
+        line1: '1459  Circle Drive',
+        line2: 'Texas',
+        postalCode: '77063',
+      },
     }; // mocked data for tests
 
     // 3. Confirm payment with card details
     // The rest will be done automatically using webhooks
-    const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Card',
-      billingDetails,
-      setupFutureUsage: saveCard ? 'OffSession' : undefined,
-    });
+    const { error, paymentIntent } = await confirmPayment(
+      clientSecret,
+      {
+        paymentMethodType: 'Card',
+        paymentMethodData: { billingDetails },
+      },
+      { setupFutureUsage: saveCard ? 'OffSession' : undefined }
+    );
 
     if (error) {
       Alert.alert(`Error code: ${error.code}`, error.message);
@@ -88,12 +90,21 @@ export default function MultilineWebhookPaymentScreen() {
         style={styles.input}
       />
       <CardForm
+        placeholders={{
+          number: '4242 4242 4242 4242',
+          postalCode: '12345',
+          cvc: 'CVC',
+          expiration: 'MM|YY',
+        }}
         autofocus
         cardStyle={inputStyles}
         style={styles.cardField}
         onFormComplete={(cardDetails) => {
           console.log(cardDetails);
           setComplete(cardDetails.complete);
+        }}
+        defaultValues={{
+          countryCode: 'US',
         }}
       />
       <View style={styles.row}>
@@ -107,6 +118,7 @@ export default function MultilineWebhookPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         disabled={!isComplete}
         loading={loading}
       />
@@ -143,5 +155,13 @@ const styles = StyleSheet.create({
 });
 
 const inputStyles: CardFormView.Styles = {
-  backgroundColor: '#FFFFFF',
+  backgroundColor: '#D3D3D3',
+  textColor: '#A020F0',
+  borderColor: '#000000',
+  borderWidth: 2,
+  borderRadius: 10,
+  cursorColor: '#000000',
+  fontSize: 16,
+  placeholderColor: '#A020F0',
+  textErrorColor: '#ff0000',
 };

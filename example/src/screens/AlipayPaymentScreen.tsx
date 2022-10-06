@@ -19,7 +19,7 @@ export default function AlipayPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'usd',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         payment_method_types: ['alipay'],
       }),
     });
@@ -38,7 +38,7 @@ export default function AlipayPaymentScreen() {
     }
 
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Alipay',
+      paymentMethodType: 'Alipay',
     });
 
     if (error) {
@@ -64,6 +64,7 @@ export default function AlipayPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
     </PaymentScreen>

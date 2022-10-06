@@ -23,7 +23,7 @@ export default function CVCReCollectionScreen() {
         },
         body: JSON.stringify({
           currency: 'usd',
-          items: [{ id: 'id' }],
+          items: ['id-1'],
           request_three_d_secure: 'any',
           // e-mail of the customer which has set up payment method
           email,
@@ -39,7 +39,7 @@ export default function CVCReCollectionScreen() {
     useStripeSdk: boolean;
     cvcToken: string;
     currency: string;
-    items: { id: string }[];
+    items: string[];
     email: string;
   }) => {
     const response = await fetch(`${API_URL}/pay-without-webhooks`, {
@@ -74,9 +74,11 @@ export default function CVCReCollectionScreen() {
     // 2. Confirm payment with CVC
     // The rest will be done automatically using webhooks
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Card',
-      cvc,
-      paymentMethodId,
+      paymentMethodType: 'Card',
+      paymentMethodData: {
+        cvc,
+        paymentMethodId,
+      },
     });
 
     if (error) {
@@ -104,7 +106,7 @@ export default function CVCReCollectionScreen() {
       const paymentIntent = await callNoWebhookPayEndpoint({
         useStripeSdk: true,
         currency: 'usd',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         cvcToken: tokenId,
         email,
       });
@@ -142,6 +144,7 @@ export default function CVCReCollectionScreen() {
           variant="primary"
           onPress={payAsynchronously}
           title="Pay"
+          accessibilityLabel="Pay"
           loading={loading}
           disabled={!email || !cvc}
         />

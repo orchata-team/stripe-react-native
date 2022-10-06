@@ -1,4 +1,4 @@
-import type { PaymentMethodCreateParams } from '@stripe/stripe-react-native';
+import type { BillingDetails } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, TextInput, View, Text, Switch } from 'react-native';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
@@ -21,7 +21,7 @@ export default function BancontactPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'eur',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         request_three_d_secure: 'any',
         payment_method_types: ['bancontact'],
       }),
@@ -40,16 +40,21 @@ export default function BancontactPaymentScreen() {
       return;
     }
 
-    const billingDetails: PaymentMethodCreateParams.BillingDetails = {
+    const billingDetails: BillingDetails = {
       name: 'John Doe',
       email: 'john@example.com',
     };
 
-    const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Bancontact',
-      billingDetails,
-      setupFutureUsage: saveIban ? 'OffSession' : undefined,
-    });
+    const { error, paymentIntent } = await confirmPayment(
+      clientSecret,
+      {
+        paymentMethodType: 'Bancontact',
+        paymentMethodData: {
+          billingDetails,
+        },
+      },
+      { setupFutureUsage: saveIban ? 'OffSession' : undefined }
+    );
 
     if (error) {
       Alert.alert(`Error code: ${error.code}`, error.message);
@@ -77,7 +82,7 @@ export default function BancontactPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
-        accessibilityLabel="pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
       <View style={styles.row}>

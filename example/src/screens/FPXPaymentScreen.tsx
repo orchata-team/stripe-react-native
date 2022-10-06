@@ -19,7 +19,7 @@ export default function FPXPaymentScreen() {
       body: JSON.stringify({
         email,
         currency: 'myr',
-        items: [{ id: 'id' }],
+        items: ['id-1'],
         request_three_d_secure: 'any',
         payment_method_types: ['fpx'],
       }),
@@ -38,7 +38,7 @@ export default function FPXPaymentScreen() {
     }
 
     const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      type: 'Fpx',
+      paymentMethodType: 'Fpx',
     });
 
     if (error) {
@@ -67,6 +67,7 @@ export default function FPXPaymentScreen() {
         variant="primary"
         onPress={handlePayPress}
         title="Pay"
+        accessibilityLabel="Pay"
         loading={loading}
       />
     </PaymentScreen>
