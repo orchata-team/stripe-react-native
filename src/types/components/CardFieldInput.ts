@@ -9,26 +9,26 @@ export enum ValidationState {
   Incomplete = 'Incomplete',
   Unknown = 'Unknown',
 }
-  export interface Details {
-    last4: string;
-    expiryMonth: number;
-    expiryYear: number;
-    postalCode?: string;
-    brand: Card.Brand;
-    complete: boolean;
-    validExpiryDate: ValidationState;
-    validCVC: ValidationState;
-    validNumber: ValidationState;
-    /**
-     * WARNING: Full card details are only returned when the `dangerouslyGetFullCardDetails` prop
-     * on the `CardField` component is set to `true`.
-     * Only do this if you're certain that you fulfill the necessary PCI compliance requirements.
-     * Make sure that you're not mistakenly logging or storing full card details!
-     * See the docs for details: https://stripe.com/docs/security/guide#validating-pci-compliance
-     */
-    number?: string;
-    cvc?: string;
-  }
+export interface Details {
+  last4: string;
+  expiryMonth: number;
+  expiryYear: number;
+  postalCode?: string;
+  brand: CardBrand;
+  complete: boolean;
+  validExpiryDate: ValidationState;
+  validCVC: ValidationState;
+  validNumber: ValidationState;
+  /**
+   * WARNING: Full card details are only returned when the `dangerouslyGetFullCardDetails` prop
+   * on the `CardField` component is set to `true`.
+   * Only do this if you're certain that you fulfill the necessary PCI compliance requirements.
+   * Make sure that you're not mistakenly logging or storing full card details!
+   * See the docs for details: https://stripe.com/docs/security/guide#validating-pci-compliance
+   */
+  number?: string;
+  cvc?: string;
+}
 
 export interface Details {
   last4: string;
